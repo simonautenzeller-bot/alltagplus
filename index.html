@@ -335,15 +335,71 @@
     margin: 6px 0 0;
     font-size: 14px;
     color: var(--text);
-    white-space: pre-wrap;
     word-break: break-word;
   }
 
+  .note__body p {
+    margin: 0 0 6px;
+    white-space: pre-wrap;
+  }
+
+  .note__body ul {
+    margin: 0 0 6px;
+    padding-left: 20px;
+  }
+
+  .note__body li { margin: 2px 0; }
+  .note__body li::marker { color: var(--accent); }
+
+  .note__checks { margin: 0 0 6px; }
+
+  .note__check {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 3px 0;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+  }
+
+  .note__check-box {
+    flex: none;
+    margin-top: 2px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--line-strong);
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+  }
+
+  .note__check-box svg { width: 11px; height: 11px; opacity: 0; color: var(--bg-elev); }
+
+  .note__check--done .note__check-box {
+    background: var(--ok);
+    border-color: var(--ok);
+  }
+
+  .note__check--done .note__check-box svg { opacity: 1; }
+  .note__check--done .note__check-text { text-decoration: line-through; color: var(--text-soft); }
+
   .note__body--clamped {
-    display: -webkit-box;
-    -webkit-line-clamp: 4;
-    -webkit-box-orient: vertical;
+    max-height: 6.4em;
     overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
+    mask-image: linear-gradient(to bottom, #000 70%, transparent);
+  }
+
+  .note__progress {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    color: var(--ok);
   }
 
   .note__foot {
@@ -658,6 +714,24 @@
 
   .sheet .form-row { margin-bottom: 13px; }
 
+  .editor-tools {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 7px;
+  }
+
+  .editor-hint {
+    margin: 6px 0 0;
+    font-size: 11.5px;
+    color: var(--text-soft);
+  }
+
+  .editor-hint code {
+    background: var(--bg-sunken);
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+
   .sheet__actions {
     display: flex;
     gap: 8px;
@@ -899,11 +973,30 @@
     </div>
     <div class="form-row">
       <label for="noteBody">Inhalt</label>
+      <div class="editor-tools">
+        <button type="button" class="btn btn--ghost" data-line-prefix="bullet">• Aufzählung</button>
+        <button type="button" class="btn btn--ghost" data-line-prefix="check">☐ Checkliste</button>
+      </div>
       <textarea class="field" id="noteBody" name="body" maxlength="8000" placeholder="Text, Passwort, Liste, Rezept …"></textarea>
+      <p class="editor-hint">Zeilen mit <code>- </code> werden zu Punkten, <code>[ ] </code> zu abhakbaren Kästchen.</p>
     </div>
     <div class="sheet__actions">
       <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
       <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="shopCatDialog">
+  <form method="dialog" class="sheet" id="shopCatForm">
+    <h2>Neue Abteilung</h2>
+    <div class="form-row">
+      <label for="shopCatName">Name</label>
+      <input class="field" id="shopCatName" name="name" required maxlength="40" placeholder="z. B. Backwaren" />
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Anlegen</button>
     </div>
   </form>
 </dialog>
@@ -1029,18 +1122,19 @@
     }
     note("WLAN-Passwörter", "WLAN Zuhause", "Netz: \nPasswort: ");
     note("WLAN-Passwörter", "WLAN bei Mama & Papa", "Netz: \nPasswort: ");
-    note("Geschenkideen", "Ideen für …", "– \n– ");
-    note("Wunschliste", "Was ich mir noch kaufen will", "– \n– ");
-    note("Wunschliste", "Fürs Haus", "– \n– ");
-    note("Games", "Durchgespielt", "– ");
-    note("Rezepte", "Lieblingsrezept", "Zutaten:\n– \n\nZubereitung:\n1. ");
-    note("Filme & Serien", "Will ich noch sehen", "– ");
+    note("Geschenkideen", "Ideen für …", "- \n- ");
+    note("Wunschliste", "Was ich mir noch kaufen will", "[ ] \n[ ] ");
+    note("Wunschliste", "Fürs Haus", "[ ] \n[ ] ");
+    note("Games", "Durchgespielt", "- ");
+    note("Rezepte", "Lieblingsrezept", "Zutaten:\n- \n- \n\nZubereitung:\n1. ");
+    note("Filme & Serien", "Will ich noch sehen", "[ ] \n[ ] ");
     note("Kleinanzeigen", "Anzeigentext (Vorlage)", "Titel:\n\nBeschreibung:\n\nPreis:\nVersand: ");
 
     return {
       tasks: t,
       notes: n,
       shopping: [],
+      shopCats: [],
       shopFavs: {
         "milch": { title: "Milch", count: 3, category: "Kühlregal" },
         "brot": { title: "Brot", count: 3, category: "Vorrat" },
@@ -1064,9 +1158,16 @@
       var parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return seed();
       parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
+      parsed.shopCats = Array.isArray(parsed.shopCats) ? parsed.shopCats : [];
       parsed.shopFavs = (parsed.shopFavs && typeof parsed.shopFavs === "object") ? parsed.shopFavs : {};
       parsed.ui = parsed.ui || {};
       parsed.ui.openGroups = parsed.ui.openGroups || {};
+      if (!parsed.ui.notesCollapsedFix) {
+        Object.keys(parsed.ui.openGroups).forEach(function (k) {
+          if (k.indexOf("notes::") === 0) delete parsed.ui.openGroups[k];
+        });
+        parsed.ui.notesCollapsedFix = true;
+      }
       return parsed;
     } catch (e) {
       return seed();
@@ -1123,9 +1224,15 @@
 
   function buildAccordion(scope, name, count, doneCount) {
     var key = accordionKey(scope, name);
+    var stored = state.ui.openGroups[key];
     var details = el("details", "acc");
-    details.open = state.ui.openGroups[key] !== false;
+    details.open = typeof stored === "boolean" ? stored : scope !== "notes";
+
+    // toggle feuert asynchron, deshalb erst ab dem nächsten Frame als Nutzeraktion werten
+    var ready = false;
+    requestAnimationFrame(function () { ready = true; });
     details.addEventListener("toggle", function () {
+      if (!ready || details.dataset.transient === "1") return;
       state.ui.openGroups[key] = details.open;
       save();
     });
@@ -1274,6 +1381,100 @@
     document.body.removeChild(ta);
   }
 
+  var BULLET_RE = /^(\s*)[-*•]\s+(.*)$/;
+  var CHECK_RE = /^(\s*)\[( |x|X)\]\s?(.*)$/;
+
+  function parseNoteLines(body) {
+    return body.split("\n").map(function (line, idx) {
+      var c = CHECK_RE.exec(line);
+      if (c) return { type: "check", done: c[2].toLowerCase() === "x", text: c[3], idx: idx };
+      var b = BULLET_RE.exec(line);
+      if (b) return { type: "bullet", text: b[2], idx: idx };
+      return { type: "text", text: line, idx: idx };
+    });
+  }
+
+  function countChecks(note) {
+    var lines = parseNoteLines(note.body || "").filter(function (l) { return l.type === "check"; });
+    return { total: lines.length, done: lines.filter(function (l) { return l.done; }).length };
+  }
+
+  function updateCheckProgress(note, host) {
+    var c = countChecks(note);
+    host.textContent = c.total ? c.done + " / " + c.total : "";
+  }
+
+  function toggleCheckLine(note, idx) {
+    var lines = (note.body || "").split("\n");
+    lines[idx] = lines[idx].replace(CHECK_RE, function (_, ws, mark, text) {
+      return ws + (mark.toLowerCase() === "x" ? "[ ] " : "[x] ") + text;
+    });
+    note.body = lines.join("\n");
+    note.updatedAt = new Date().toISOString();
+    save();
+  }
+
+  function renderNoteBody(note, reportCheckCount) {
+    var frag = document.createDocumentFragment();
+    var lines = parseNoteLines(note.body || "");
+    var checkCount = 0;
+    var i = 0;
+
+    while (i < lines.length) {
+      var type = lines[i].type;
+
+      if (type === "bullet") {
+        var ul = el("ul");
+        while (i < lines.length && lines[i].type === "bullet") {
+          ul.appendChild(el("li", null, lines[i].text));
+          i++;
+        }
+        frag.appendChild(ul);
+      } else if (type === "check") {
+        var group = el("div", "note__checks");
+        while (i < lines.length && lines[i].type === "check") {
+          group.appendChild(checkRow(note, lines[i]));
+          checkCount++;
+          i++;
+        }
+        frag.appendChild(group);
+      } else {
+        var block = [];
+        while (i < lines.length && lines[i].type === "text") {
+          block.push(lines[i].text);
+          i++;
+        }
+        var text = block.join("\n").replace(/^\n+|\n+$/g, "");
+        if (text) frag.appendChild(el("p", null, text));
+      }
+    }
+
+    if (reportCheckCount) reportCheckCount(checkCount);
+    return frag;
+  }
+
+  function checkRow(note, line) {
+    var btn = el("button", "note__check" + (line.done ? " note__check--done" : ""));
+    btn.type = "button";
+    btn.setAttribute("aria-pressed", line.done ? "true" : "false");
+
+    var box = el("span", "note__check-box");
+    box.appendChild(icon(ICON.check, { width: "3.5" }));
+    btn.appendChild(box);
+    btn.appendChild(el("span", "note__check-text", line.text));
+
+    btn.addEventListener("click", function () {
+      toggleCheckLine(note, line.idx);
+      line.done = !line.done;
+      btn.classList.toggle("note__check--done", line.done);
+      btn.setAttribute("aria-pressed", line.done ? "true" : "false");
+      var progress = document.querySelector('[data-check-progress="' + note.id + '"]');
+      if (progress) updateCheckProgress(note, progress);
+    });
+
+    return btn;
+  }
+
   function noteCard(note) {
     var card = el("article", "note");
 
@@ -1324,7 +1525,9 @@
     card.appendChild(head);
 
     if (note.body) {
-      var body = el("p", "note__body note__body--clamped", note.body);
+      var body = el("div", "note__body note__body--clamped");
+      var checkTotal = 0;
+      body.appendChild(renderNoteBody(note, function (n) { checkTotal = n; }));
       card.appendChild(body);
 
       var foot = el("div", "note__foot");
@@ -1342,6 +1545,14 @@
       copy.type = "button";
       copy.addEventListener("click", function () { copyText(note.body); });
       foot.appendChild(copy);
+
+      if (checkTotal) {
+        var progress = el("span", "note__progress");
+        progress.dataset.checkProgress = note.id;
+        updateCheckProgress(note, progress);
+        foot.appendChild(progress);
+      }
+
       foot.appendChild(el("span", "note__date", "geändert " + formatDate(note.updatedAt || note.createdAt)));
       card.appendChild(foot);
     }
@@ -1383,7 +1594,10 @@
           return byName(a.title, b.title);
         });
         var acc = buildAccordion("notes", entry[0], items.length, null);
-        if (q) acc.root.open = true;
+        if (q) {
+          acc.root.dataset.transient = "1";
+          acc.root.open = true;
+        }
         items.forEach(function (n) { acc.body.appendChild(noteCard(n)); });
         host.appendChild(acc.root);
       });
@@ -1392,6 +1606,7 @@
   // ---------- Einkaufsliste ----------
 
   var SHOP_CATS = ["Drogerie", "Getränke", "Haushalt", "Kühlregal", "Obst & Gemüse", "Sonstiges", "Vorrat"].sort(byName);
+  var NEW_CAT = "__neue-abteilung__";
 
   // "2x Milch" / "3 Äpfel" -> Menge separat anzeigen
   function splitQuantity(raw) {
@@ -1477,16 +1692,30 @@
     return row;
   }
 
+  function allShopCats() {
+    var list = SHOP_CATS.slice();
+    state.shopCats.concat(state.shopping.map(function (i) { return i.category; }))
+      .forEach(function (c) {
+        var name = (c || "").trim();
+        if (!name) return;
+        if (!list.some(function (x) { return byName(x, name) === 0; })) list.push(name);
+      });
+    return list.sort(byName);
+  }
+
   function renderShopCategories() {
     var sel = document.getElementById("quickAddCat");
     var current = state.ui.lastShopCat || "Sonstiges";
     sel.textContent = "";
-    SHOP_CATS.forEach(function (c) {
+    allShopCats().forEach(function (c) {
       var opt = el("option", null, c);
       opt.value = c;
       if (c === current) opt.selected = true;
       sel.appendChild(opt);
     });
+    var add = el("option", null, "+ Neue Abteilung …");
+    add.value = NEW_CAT;
+    sel.appendChild(add);
   }
 
   function renderFavourites() {
@@ -1559,12 +1788,45 @@
   document.getElementById("quickAddForm").addEventListener("submit", function (e) {
     e.preventDefault();
     var input = document.getElementById("quickAddInput");
-    addShopItem(input.value, document.getElementById("quickAddCat").value);
+    var cat = document.getElementById("quickAddCat").value;
+    if (cat === NEW_CAT) { openShopCatDialog(); return; }
+    addShopItem(input.value, cat);
     input.value = "";
     input.focus();
   });
 
+  var shopCatDialog = document.getElementById("shopCatDialog");
+  var shopCatForm = document.getElementById("shopCatForm");
+
+  function openShopCatDialog() {
+    shopCatForm.name.value = "";
+    shopCatDialog.showModal();
+    setTimeout(function () { shopCatForm.name.focus(); }, 60);
+  }
+
+  shopCatForm.addEventListener("submit", function () {
+    var name = shopCatForm.name.value.trim();
+    if (!name) return;
+    var existing = allShopCats().find(function (c) { return byName(c, name) === 0; });
+    if (existing) {
+      state.ui.lastShopCat = existing;
+      toast("Abteilung gibt es schon");
+    } else {
+      state.shopCats.push(name);
+      state.ui.lastShopCat = name;
+      toast("Abteilung angelegt");
+    }
+    save();
+  });
+
+  // Auswahl nach Abbruch oder Anlegen wieder auf eine echte Abteilung setzen
+  shopCatDialog.addEventListener("close", function () {
+    renderShopCategories();
+    document.getElementById("quickAddInput").focus();
+  });
+
   document.getElementById("quickAddCat").addEventListener("change", function (e) {
+    if (e.target.value === NEW_CAT) { openShopCatDialog(); return; }
     state.ui.lastShopCat = e.target.value;
     save();
   });
@@ -1673,6 +1935,66 @@
     toast("Gespeichert");
   });
 
+  // ---------- Listen-Werkzeuge im Notiz-Editor ----------
+
+  var PREFIX = { bullet: "- ", check: "[ ] " };
+
+  function stripPrefix(line) {
+    return line.replace(CHECK_RE, "$1$3").replace(BULLET_RE, "$1$2");
+  }
+
+  function applyLinePrefix(kind) {
+    var ta = document.getElementById("noteBody");
+    var value = ta.value;
+    var start = value.lastIndexOf("\n", ta.selectionStart - 1) + 1;
+    var endIdx = value.indexOf("\n", ta.selectionEnd);
+    var end = endIdx === -1 ? value.length : endIdx;
+
+    var lines = value.slice(start, end).split("\n");
+    var prefix = PREFIX[kind];
+    var filled = lines.filter(function (l) { return l.trim(); });
+    var allSet = filled.length > 0 && filled.every(function (l) {
+      return l.trimStart().indexOf(prefix.trim()) === 0;
+    });
+
+    var changed = lines.map(function (l) {
+      if (!l.trim() && filled.length) return l;
+      var bare = stripPrefix(l).trimStart();
+      return allSet ? bare : prefix + bare;
+    });
+
+    var next = changed.join("\n");
+    ta.value = value.slice(0, start) + next + value.slice(end);
+    ta.focus();
+    ta.setSelectionRange(start + next.length, start + next.length);
+  }
+
+  document.querySelectorAll("[data-line-prefix]").forEach(function (btn) {
+    btn.addEventListener("click", function () { applyLinePrefix(btn.dataset.linePrefix); });
+  });
+
+  // Enter setzt eine begonnene Liste fort, eine leere Listenzeile beendet sie
+  document.getElementById("noteBody").addEventListener("keydown", function (e) {
+    if (e.key !== "Enter" || e.shiftKey) return;
+    var ta = e.target;
+    var start = ta.value.lastIndexOf("\n", ta.selectionStart - 1) + 1;
+    var line = ta.value.slice(start, ta.selectionStart);
+
+    var check = CHECK_RE.exec(line);
+    var bullet = check ? null : BULLET_RE.exec(line);
+    if (!check && !bullet) return;
+
+    e.preventDefault();
+    var prefix = check ? "[ ] " : "- ";
+    var content = check ? check[3] : bullet[2];
+
+    if (!content.trim()) {
+      ta.setRangeText("", start, ta.selectionStart, "end");
+      return;
+    }
+    ta.setRangeText("\n" + prefix, ta.selectionStart, ta.selectionEnd, "end");
+  });
+
   document.querySelectorAll("[data-close]").forEach(function (btn) {
     btn.addEventListener("click", function () { btn.closest("dialog").close(); });
   });
@@ -1753,6 +2075,7 @@
           tasks: data.tasks,
           notes: data.notes,
           shopping: Array.isArray(data.shopping) ? data.shopping : [],
+          shopCats: Array.isArray(data.shopCats) ? data.shopCats : [],
           shopFavs: (data.shopFavs && typeof data.shopFavs === "object") ? data.shopFavs : {},
           ui: data.ui || { openGroups: {}, tab: "daily", noteFilter: "*", lastShopCat: "Sonstiges" }
         };
