@@ -120,6 +120,11 @@
     padding: 1px 8px 2px;
   }
 
+  .app-bar__brand--demo {
+    color: var(--warn);
+    border-color: var(--warn);
+  }
+
   main {
     padding: 16px 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
     max-width: 760px;
@@ -626,6 +631,11 @@
     box-shadow: var(--shadow);
   }
 
+  .panel--demo {
+    border-color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 8%, var(--bg-elev));
+  }
+
   .panel h2 {
     margin: 0 0 4px;
     font-family: var(--serif);
@@ -886,6 +896,13 @@
       <p id="statsLine">–</p>
     </div>
 
+    <div class="panel" id="demoPanel">
+      <h2>Demo-Modus</h2>
+      <p id="demoText">Zeigt die App mit Beispiel-Inhalten – ideal, um sie jemandem zu zeigen. Deine echten Daten bleiben unangetastet und sind nach dem Beenden wieder da.</p>
+      <button class="btn btn--block" id="demoToggleBtn">Demo-Modus starten</button>
+      <button class="btn btn--secondary btn--block" id="demoResetBtn" hidden>Demo-Inhalte zurücksetzen</button>
+    </div>
+
     <div class="panel">
       <h2>Daten sichern</h2>
       <p>Alles liegt nur lokal auf diesem Gerät. Vor einem Handy-Wechsel bitte exportieren.</p>
@@ -1037,6 +1054,8 @@
   "use strict";
 
   var STORAGE_KEY = "AlltagPlus.v1";
+  var DEMO_KEY = "AlltagPlus.demo";
+  var MODE_KEY = "AlltagPlus.mode";
   var CADENCES = ["daily", "weekly", "monthly"];
   var CADENCE_LABEL = { daily: "Täglich", weekly: "Wöchentlich", monthly: "Monatlich" };
   var VIEW_TITLE = { daily: "Heute", weekly: "Diese Woche", monthly: "Dieser Monat", shopping: "Einkaufszettel", notes: "Merkzettel", more: "Mehr" };
@@ -1191,14 +1210,99 @@
     };
   }
 
+  function demoData() {
+    var now = new Date().toISOString();
+    var data = seed();
+
+    function markDone(title) {
+      var t = data.tasks.find(function (x) { return x.title === title; });
+      if (t) { t.donePeriod = periodKey(t.cadence); t.lastDone = now; }
+    }
+
+    data.tasks.push({ id: uid(), title: "Pflanzen gießen", cadence: "daily", group: "Haushalt", note: "", donePeriod: null, lastDone: null, createdAt: now });
+    data.tasks.push({ id: uid(), title: "Wäsche waschen", cadence: "weekly", group: "Haushalt", note: "Buntwäsche", donePeriod: null, lastDone: null, createdAt: now });
+    data.tasks.push({ id: uid(), title: "Auto tanken", cadence: "monthly", group: "Unterwegs", note: "", donePeriod: null, lastDone: null, createdAt: now });
+
+    ["Küche sauber machen", "Spülmaschine ausräumen", "Betten aufschütteln", "Kurz durchlüften",
+     "Bad putzen", "Wocheneinkauf planen", "Kontoauszüge prüfen", "Backup vom Handy machen"].forEach(markDone);
+
+    data.shopping = [
+      { id: uid(), title: "Milch", qty: "2×", category: "Kühlregal", done: false, addedAt: now },
+      { id: uid(), title: "Joghurt", qty: "4×", category: "Kühlregal", done: false, addedAt: now },
+      { id: uid(), title: "Bananen", qty: "", category: "Obst & Gemüse", done: false, addedAt: now },
+      { id: uid(), title: "Tomaten", qty: "6×", category: "Obst & Gemüse", done: false, addedAt: now },
+      { id: uid(), title: "Vollkornbrot", qty: "", category: "Backwaren", done: false, addedAt: now },
+      { id: uid(), title: "Kaffee", qty: "", category: "Vorrat", done: false, addedAt: now },
+      { id: uid(), title: "Zahnpasta", qty: "", category: "Drogerie", done: true, addedAt: now },
+      { id: uid(), title: "Klopapier", qty: "", category: "Drogerie", done: true, addedAt: now }
+    ];
+
+    data.shopCats = ["Backwaren"];
+    data.ui.lastShopCat = "Kühlregal";
+
+    data.shopLists.push({
+      id: uid(),
+      name: "Wocheneinkauf",
+      createdAt: now,
+      items: [
+        { title: "Milch", qty: "2×", category: "Kühlregal" },
+        { title: "Butter", qty: "", category: "Kühlregal" },
+        { title: "Eier", qty: "10×", category: "Kühlregal" },
+        { title: "Vollkornbrot", qty: "", category: "Backwaren" },
+        { title: "Kaffee", qty: "", category: "Vorrat" },
+        { title: "Spülmittel", qty: "", category: "Haushalt" }
+      ]
+    });
+
+    function note(category, title, body) {
+      return { id: uid(), category: category, title: title, body: body, pinned: false, createdAt: now, updatedAt: now };
+    }
+
+    data.notes = [
+      note("WLAN-Passwörter", "WLAN Zuhause", "Netz: Fritzbox-Wohnung\nPasswort: sonne-baum-42-blau"),
+      note("WLAN-Passwörter", "WLAN bei Mama & Papa", "Netz: Zuhause-Gast\nPasswort: Gartenzaun2019"),
+      note("Geschenkideen", "Anna-Lena", "- Kochbuch Italien\n- Gutschein Kletterhalle\n- Espressotassen (die eckigen)\n- Wanderrucksack 20 l"),
+      note("Geschenkideen", "Papa", "- Grillzange aus Edelstahl\n- Whisky-Tasting\n- Warme Socken (Gr. 45)"),
+      note("Wunschliste", "Was ich mir noch kaufen will", "[x] Neue Laufschuhe\n[ ] Monitor 27 Zoll\n[ ] Bluetooth-Kopfhörer\n[ ] Rucksack für Reisen"),
+      note("Wunschliste", "Fürs Haus", "[ ] Regal fürs Wohnzimmer\n[ ] Vorhänge Schlafzimmer\n[x] Fußmatte\n[ ] Kräuterbeet für den Balkon"),
+      note("Games", "Durchgespielt", "- Baldur's Gate 3\n- Zelda: Tears of the Kingdom\n- Hades\n- Stardew Valley"),
+      note("Games", "Will ich noch spielen", "[ ] Elden Ring\n[ ] Outer Wilds\n[ ] Silksong"),
+      note("Filme & Serien", "Will ich noch sehen", "[ ] Dune Teil 2\n[x] Oppenheimer\n[ ] Shogun (Serie)\n[ ] Poor Things"),
+      note("Rezepte", "Spaghetti Bolognese", "Zutaten:\n- 500 g Hackfleisch\n- 2 Dosen passierte Tomaten\n- 2 Zwiebeln\n- 2 Zehen Knoblauch\n- Parmesan\n\nZubereitung:\n1. Zwiebeln und Knoblauch anbraten\n2. Hack krümelig anbraten, salzen\n3. Tomaten dazu, 40 Minuten köcheln\n4. Mit Parmesan servieren"),
+      note("Rezepte", "Ofengemüse", "Zutaten:\n- Kartoffeln\n- Karotten\n- Zucchini\n- Feta\n\n200 °C, 35 Minuten, Feta die letzten 10 Minuten dazu."),
+      note("Kleinanzeigen", "Fahrrad (verkauft)", "Titel: Herrenrad 28 Zoll, 21 Gänge\n\nBeschreibung: Gepflegtes Trekkingrad, wenig gefahren, neue Bremsbeläge. Nur Abholung.\n\nPreis: 180 € VB\nVersand: nein"),
+      note("Kleinanzeigen", "Sofa – Anzeigentext", "Titel: 3-Sitzer Stoffsofa, grau\n\nBeschreibung: Bequemes Sofa aus tierfreiem Nichtraucherhaushalt. Maße 210 × 90 cm. Abholung bis Ende des Monats.\n\nPreis: 250 € VB\nVersand: nein"),
+      note("Reise", "Packliste Wochenende", "[x] Reisepass\n[x] Ladekabel\n[ ] Sonnencreme\n[ ] Badesachen\n[ ] Wanderschuhe\n\nAbfahrt Freitag 16 Uhr, Schlüssel bei den Nachbarn abgeben.")
+    ];
+
+    data.notes[0].pinned = true;
+
+    data.shopFavs = {};
+    [["Milch", 9, "Kühlregal"], ["Brot", 7, "Backwaren"], ["Bananen", 6, "Obst & Gemüse"],
+     ["Kaffee", 5, "Vorrat"], ["Butter", 5, "Kühlregal"], ["Eier", 4, "Kühlregal"],
+     ["Klopapier", 4, "Drogerie"], ["Spülmittel", 3, "Haushalt"], ["Tomaten", 3, "Obst & Gemüse"],
+     ["Käse", 3, "Kühlregal"], ["Nudeln", 2, "Vorrat"], ["Apfelsaft", 2, "Getränke"]]
+      .forEach(function (f) {
+        data.shopFavs[f[0].toLowerCase()] = { title: f[0], count: f[1], category: f[2] };
+      });
+
+    return data;
+  }
+
   var state;
+  var demoMode = false;
+  try { demoMode = localStorage.getItem(MODE_KEY) === "demo"; } catch (e) { demoMode = false; }
+
+  function activeKey() { return demoMode ? DEMO_KEY : STORAGE_KEY; }
+
+  function freshData() { return demoMode ? demoData() : seed(); }
 
   function load() {
     try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return seed();
+      var raw = localStorage.getItem(activeKey());
+      if (!raw) return freshData();
       var parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return seed();
+      if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return freshData();
       parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
       parsed.shopCats = Array.isArray(parsed.shopCats) ? parsed.shopCats : [];
       parsed.shopLists = Array.isArray(parsed.shopLists) ? parsed.shopLists : [];
@@ -1213,13 +1317,13 @@
       }
       return parsed;
     } catch (e) {
-      return seed();
+      return freshData();
     }
   }
 
   function save() {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      localStorage.setItem(activeKey(), JSON.stringify(state));
     } catch (e) {
       toast("Speichern fehlgeschlagen – Speicher voll?");
     }
@@ -2214,6 +2318,38 @@
     });
   });
 
+  // ---------- Demo-Modus ----------
+
+  function updateDemoUi() {
+    document.getElementById("demoToggleBtn").textContent = demoMode ? "Demo beenden" : "Demo-Modus starten";
+    document.getElementById("demoResetBtn").hidden = !demoMode;
+    document.getElementById("demoPanel").classList.toggle("panel--demo", demoMode);
+    var brand = document.querySelector(".app-bar__brand");
+    brand.textContent = demoMode ? "Demo" : "Alltag+";
+    brand.classList.toggle("app-bar__brand--demo", demoMode);
+  }
+
+  function setDemoMode(on) {
+    demoMode = on;
+    try { localStorage.setItem(MODE_KEY, on ? "demo" : "live"); } catch (e) { /* egal */ }
+    state = load();
+    save();
+    renderAll();
+    updateDemoUi();
+    toast(on ? "Demo-Modus aktiv" : "Zurück bei deinen Daten");
+  }
+
+  document.getElementById("demoToggleBtn").addEventListener("click", function () {
+    setDemoMode(!demoMode);
+  });
+
+  document.getElementById("demoResetBtn").addEventListener("click", function () {
+    state = demoData();
+    save();
+    renderAll();
+    toast("Demo zurückgesetzt");
+  });
+
   document.getElementById("exportBtn").addEventListener("click", function () {
     var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     var url = URL.createObjectURL(blob);
@@ -2300,6 +2436,7 @@
 
   state = load();
   renderAll();
+  updateDemoUi();
   save();
 
   var lastDay = periodKey("daily");

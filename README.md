@@ -12,6 +12,7 @@ Reines HTML/CSS/JS ohne Build-Schritt, funktioniert direkt über GitHub Pages.
 - **Gespeicherte Listen** – den aktuellen Zettel als Vorlage sichern (z. B. ein Rezept oder der Wocheneinkauf) und später per Tipp wieder auf den Zettel legen.
 - **Merkzettel** – Notizen nach Kategorien gruppiert, mit Suche, Kategorie-Filter, Anpinnen und „Kopieren“-Button (praktisch für WLAN-Passwörter und Anzeigentexte). Zeilen mit `- ` werden als Aufzählung dargestellt, Zeilen mit `[ ] ` als abhakbare Checkliste inklusive Fortschrittsanzeige.
 - **Backup** – Export/Import als JSON unter „Mehr“.
+- **Demo-Modus** – unter „Mehr“ umschaltbar: zeigt die App mit gefüllten Beispiel-Inhalten. Demo- und echte Daten liegen in getrennten Speichern, nach dem Beenden ist alles wieder wie vorher.
 - **Offline** – Service Worker cached die App, alle Daten liegen im `localStorage` des Geräts.
 
 ## Lokal testen
