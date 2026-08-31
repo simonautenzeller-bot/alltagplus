@@ -314,6 +314,8 @@
 
   /* ---------- Notes ---------- */
 
+  .note-list { padding: 4px 0; }
+
   .note {
     border-bottom: 1px solid var(--line);
   }
@@ -495,6 +497,16 @@
     padding: 10px 16px 12px;
     border-top: 1px solid var(--line);
   }
+
+  .list-edit-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .list-edit-row .field { padding: 8px 10px; }
+  .list-edit-row input { flex: 1 1 55%; min-width: 0; }
+  .list-edit-row select { flex: 1 1 45%; min-width: 0; }
 
   /* ---------- Buttons ---------- */
 
@@ -707,6 +719,8 @@
     border-radius: 8px 8px 0 0;
     padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
     max-width: 620px;
+    max-height: 88vh;
+    overflow-y: auto;
     margin: 0 auto;
   }
 
@@ -1035,10 +1049,29 @@
 
 <dialog id="listNameDialog">
   <form method="dialog" class="sheet" id="listNameForm">
-    <h2 id="listNameTitle">Liste speichern</h2>
+    <h2>Liste speichern</h2>
     <div class="form-row">
       <label for="listName">Name</label>
       <input class="field" id="listName" name="name" required maxlength="60" placeholder="z. B. Spaghetti Bolognese" />
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="listEditDialog">
+  <form method="dialog" class="sheet" id="listEditForm">
+    <h2>Liste bearbeiten</h2>
+    <div class="form-row">
+      <label for="listEditName">Name</label>
+      <input class="field" id="listEditName" name="name" required maxlength="60" />
+    </div>
+    <div class="form-row">
+      <label>Artikel</label>
+      <div id="listEditItems"></div>
+      <button type="button" class="btn btn--ghost" id="listEditAdd">+ Artikel</button>
     </div>
     <div class="sheet__actions">
       <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
@@ -1732,6 +1765,23 @@
       return;
     }
 
+    function sortNotes(list) {
+      return list.slice().sort(function (a, b) {
+        if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
+        return byName(a.title, b.title);
+      });
+    }
+
+    // Bei aktivem Kategorie-Filter entfällt die Kategorie-Ebene
+    if (filter !== "*") {
+      var card = el("div", "acc");
+      var body = el("div", "note-list");
+      sortNotes(visible).forEach(function (n) { body.appendChild(noteCard(n, !!q)); });
+      card.appendChild(body);
+      host.appendChild(card);
+      return;
+    }
+
     var byCat = new Map();
     visible.forEach(function (n) {
       var cat = (n.category || "").trim() || "Allgemein";
@@ -1742,10 +1792,7 @@
     Array.from(byCat.entries())
       .sort(function (a, b) { return byName(a[0], b[0]); })
       .forEach(function (entry) {
-        var items = entry[1].slice().sort(function (a, b) {
-          if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
-          return byName(a.title, b.title);
-        });
+        var items = sortNotes(entry[1]);
         var acc = buildAccordion("notes", entry[0], items.length, null);
         if (q) {
           acc.root.dataset.transient = "1";
@@ -1845,9 +1892,9 @@
     use.addEventListener("click", function () { applyShopList(list); });
     tools.appendChild(use);
 
-    var rename = el("button", "btn btn--ghost", "Umbenennen");
+    var rename = el("button", "btn btn--ghost", "Bearbeiten");
     rename.type = "button";
-    rename.addEventListener("click", function () { openListNameDialog(list); });
+    rename.addEventListener("click", function () { openListEditDialog(list); });
     tools.appendChild(rename);
 
     var del = el("button", "btn btn--ghost", "Löschen");
@@ -2065,12 +2112,9 @@
 
   var listNameDialog = document.getElementById("listNameDialog");
   var listNameForm = document.getElementById("listNameForm");
-  var editingListId = null;
 
-  function openListNameDialog(list) {
-    editingListId = list ? list.id : null;
-    document.getElementById("listNameTitle").textContent = list ? "Liste umbenennen" : "Liste speichern";
-    listNameForm.name.value = list ? list.name : "";
+  function openListNameDialog() {
+    listNameForm.name.value = "";
     listNameDialog.showModal();
     setTimeout(function () { listNameForm.name.focus(); }, 60);
   }
@@ -2079,28 +2123,95 @@
     var name = listNameForm.name.value.trim();
     if (!name) return;
 
-    if (editingListId) {
-      var l = state.shopLists.find(function (x) { return x.id === editingListId; });
-      if (l) l.name = name;
-      toast("Umbenannt");
-    } else {
-      state.shopLists.push({
-        id: uid(),
-        name: name,
-        createdAt: new Date().toISOString(),
-        items: state.shopping.map(function (i) {
-          return { title: i.title, qty: i.qty || "", category: i.category || "Sonstiges" };
-        })
-      });
-      toast("Liste gespeichert");
-    }
+    state.shopLists.push({
+      id: uid(),
+      name: name,
+      createdAt: new Date().toISOString(),
+      items: state.shopping.map(function (i) {
+        return { title: i.title, qty: i.qty || "", category: i.category || "Sonstiges" };
+      })
+    });
     save();
     renderShopLists();
+    toast("Liste gespeichert");
   });
 
   document.getElementById("saveListBtn").addEventListener("click", function () {
     if (!state.shopping.length) { toast("Zettel ist leer"); return; }
-    openListNameDialog(null);
+    openListNameDialog();
+  });
+
+  var listEditDialog = document.getElementById("listEditDialog");
+  var listEditForm = document.getElementById("listEditForm");
+  var listEditItems = document.getElementById("listEditItems");
+  var editingListItemsId = null;
+
+  function listEditRow(item) {
+    var row = el("div", "list-edit-row");
+
+    var title = el("input", "field");
+    title.type = "text";
+    title.maxLength = 80;
+    title.placeholder = "z. B. 2x Milch";
+    title.value = item ? itemToRaw(item) : "";
+    title.setAttribute("aria-label", "Artikel");
+    row.appendChild(title);
+
+    var cat = el("select", "field");
+    cat.setAttribute("aria-label", "Abteilung");
+    allShopCats().forEach(function (c) {
+      var opt = el("option", null, c);
+      opt.value = c;
+      if (item && item.category === c) opt.selected = true;
+      cat.appendChild(opt);
+    });
+    row.appendChild(cat);
+
+    var del = el("button", "icon-btn");
+    del.type = "button";
+    del.title = "Zeile entfernen";
+    del.setAttribute("aria-label", "Zeile entfernen");
+    del.appendChild(icon(ICON.trash));
+    del.addEventListener("click", function () { row.remove(); });
+    row.appendChild(del);
+
+    return row;
+  }
+
+  function openListEditDialog(list) {
+    editingListItemsId = list.id;
+    listEditForm.name.value = list.name;
+    listEditItems.textContent = "";
+    list.items.slice()
+      .sort(function (a, b) { return byName(a.title, b.title); })
+      .forEach(function (i) { listEditItems.appendChild(listEditRow(i)); });
+    listEditDialog.showModal();
+  }
+
+  document.getElementById("listEditAdd").addEventListener("click", function () {
+    var row = listEditRow(null);
+    listEditItems.appendChild(row);
+    row.querySelector("input").focus();
+  });
+
+  listEditForm.addEventListener("submit", function () {
+    var list = state.shopLists.find(function (l) { return l.id === editingListItemsId; });
+    if (!list) return;
+    var name = listEditForm.name.value.trim();
+    if (name) list.name = name;
+
+    list.items = Array.from(listEditItems.querySelectorAll(".list-edit-row"))
+      .map(function (row) {
+        var raw = row.querySelector("input").value.trim();
+        if (!raw) return null;
+        var parts = splitQuantity(raw);
+        return { title: parts.title, qty: parts.qty, category: row.querySelector("select").value };
+      })
+      .filter(Boolean);
+
+    save();
+    renderShopLists();
+    toast("Liste gespeichert");
   });
 
   document.getElementById("clearDoneBtn").addEventListener("click", function () {
