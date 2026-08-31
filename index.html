@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Alltag+</title>
+<meta name="description" content="Alltag+ – tägliche, wöchentliche und monatliche Aufgaben abhaken, Einkaufszettel führen und Merkzettel speichern." />
+<meta name="theme-color" content="#f6efe3" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./icon.svg" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="./icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Alltag+" />
+<style>
+  :root {
+    --bg: #f6efe3;
+    --bg-elev: #fffcf6;
+    --bg-sunken: #efe6d6;
+    --text: #241f18;
+    --text-soft: #7a6d5c;
+    --line: #ddd0ba;
+    --line-strong: #241f18;
+    --accent: #c1512a;
+    --accent-soft: #f7e3d8;
+    --ok: #2f6b4f;
+    --ok-soft: #dfeae1;
+    --warn: #a5750f;
+    --danger: #a8342c;
+    --radius: 6px;
+    --radius-sm: 4px;
+    --shadow: 3px 3px 0 rgba(36, 31, 24, .13);
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+    --tabbar-h: 64px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1813;
+      --bg-elev: #262019;
+      --bg-sunken: #171310;
+      --text: #f2e9db;
+      --text-soft: #ab9a83;
+      --line: #453a2c;
+      --line-strong: #6d5c45;
+      --accent: #e08a5c;
+      --accent-soft: #3a2519;
+      --ok: #7fb894;
+      --ok-soft: #22301f;
+      --warn: #d9ab55;
+      --danger: #e3796d;
+      --shadow: 3px 3px 0 rgba(0, 0, 0, .35);
+    }
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior-y: contain;
+  }
+
+  button, input, textarea, select {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* ---------- App shell ---------- */
+
+  .app-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    padding: calc(env(safe-area-inset-top) + 16px) 18px 14px;
+    background: var(--bg);
+    border-bottom: 2px solid var(--line-strong);
+  }
+
+  .app-bar__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .app-bar h1 {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: 26px;
+    font-weight: 600;
+    letter-spacing: -.01em;
+  }
+
+  .app-bar__date {
+    margin: 3px 0 0;
+    font-size: 12px;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  .app-bar__brand {
+    flex: none;
+    font-family: var(--serif);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--accent);
+    border: 1.5px solid var(--accent);
+    border-radius: var(--radius-sm);
+    padding: 1px 8px 2px;
+  }
+
+  main {
+    padding: 16px 16px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px);
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .view[hidden] { display: none; }
+
+  .view__intro {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--text-soft);
+    font-style: italic;
+  }
+
+  /* ---------- Progress ---------- */
+
+  .progress-card {
+    background: var(--bg-elev);
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+    box-shadow: var(--shadow);
+  }
+
+  .progress-card__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+
+  .progress-card__count {
+    font-family: var(--serif);
+    font-size: 19px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--accent);
+  }
+
+  .progress-track {
+    margin-top: 10px;
+    height: 10px;
+    border: 1.5px solid var(--line-strong);
+    background: var(--bg-sunken);
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    width: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      var(--ok) 0 6px,
+      color-mix(in srgb, var(--ok) 72%, transparent) 6px 12px
+    );
+    transition: width .25s ease;
+  }
+
+  .progress-card__hint {
+    margin: 8px 0 0;
+    font-size: 12.5px;
+    color: var(--text-soft);
+  }
+
+  /* ---------- Accordion ---------- */
+
+  .acc {
+    background: var(--bg-elev);
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .acc > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+
+  .acc > summary::-webkit-details-marker { display: none; }
+
+  .acc__chevron {
+    width: 16px;
+    height: 16px;
+    flex: none;
+    color: var(--accent);
+    transition: transform .18s ease;
+  }
+
+  .acc[open] .acc__chevron { transform: rotate(90deg); }
+
+  .acc__title { flex: 1; min-width: 0; }
+
+  .acc__badge {
+    flex: none;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    padding: 2px 8px;
+    border: 1.5px solid var(--line);
+    background: var(--bg-sunken);
+    color: var(--text-soft);
+  }
+
+  .acc__badge--done {
+    background: var(--ok-soft);
+    border-color: var(--ok);
+    color: var(--ok);
+  }
+
+  .acc__body {
+    border-top: 2px solid var(--line-strong);
+    padding: 4px 0;
+  }
+
+  /* ---------- Task rows ---------- */
+
+  .task {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 16px;
+  }
+
+  .task + .task { border-top: 1px solid var(--line); }
+
+  .task__check {
+    flex: none;
+    margin-top: 1px;
+    width: 26px;
+    height: 26px;
+    border-radius: 3px;
+    border: 2px solid var(--line-strong);
+    background: transparent;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background .15s ease, border-color .15s ease;
+  }
+
+  .task__check svg { width: 15px; height: 15px; opacity: 0; color: var(--bg-elev); }
+
+  .task--done .task__check {
+    background: var(--ok);
+    border-color: var(--ok);
+  }
+
+  .task--done .task__check svg { opacity: 1; }
+
+  .task__main { flex: 1; min-width: 0; }
+
+  .task__title {
+    display: block;
+    font-size: 15px;
+    word-break: break-word;
+  }
+
+  .task--done .task__title {
+    text-decoration: line-through;
+    color: var(--text-soft);
+  }
+
+  .task__meta {
+    display: block;
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-top: 2px;
+  }
+
+  .task__tools { display: flex; gap: 2px; flex: none; }
+
+  /* ---------- Notes ---------- */
+
+  .note {
+    padding: 12px 16px;
+  }
+
+  .note + .note { border-top: 1px solid var(--line); }
+
+  .note__head {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .note__title {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--serif);
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0;
+    word-break: break-word;
+  }
+
+  .note__body {
+    margin: 6px 0 0;
+    font-size: 14px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .note__body--clamped {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .note__foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .note__date {
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-left: auto;
+  }
+
+  .pin-dot {
+    flex: none;
+    font-size: 12px;
+    color: var(--warn);
+  }
+
+  /* ---------- Einkaufsliste ---------- */
+
+  .quickadd {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .quickadd__cat { grid-column: 1 / -1; }
+
+  .quickadd__btn {
+    padding-inline: 20px;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .fav-label {
+    margin: 14px 0 7px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+  }
+
+  .shop {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+  }
+
+  .shop + .shop { border-top: 1px solid var(--line); }
+
+  .shop__main { flex: 1; min-width: 0; }
+
+  .shop__title {
+    display: block;
+    font-size: 15px;
+    word-break: break-word;
+  }
+
+  .shop--done .shop__title {
+    text-decoration: line-through;
+    color: var(--text-soft);
+  }
+
+  .shop__qty {
+    flex: none;
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--accent);
+    min-width: 34px;
+    text-align: right;
+  }
+
+  /* ---------- Buttons ---------- */
+
+  .btn {
+    appearance: none;
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius-sm);
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    background: var(--accent);
+    color: #fffcf6;
+    box-shadow: var(--shadow);
+  }
+
+  .btn:active { transform: translate(2px, 2px); box-shadow: none; }
+
+  .btn--secondary {
+    background: var(--bg-elev);
+    color: var(--text);
+  }
+
+  .btn--ghost {
+    background: var(--bg-sunken);
+    color: var(--text-soft);
+    border: 1.5px solid var(--line);
+    box-shadow: none;
+    padding: 5px 11px;
+    font-size: 11px;
+  }
+
+  .btn--danger { background: var(--danger); color: #fffcf6; }
+
+  .btn--block { display: block; width: 100%; }
+
+  .icon-btn {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    padding: 6px;
+    border-radius: 3px;
+    color: var(--text-soft);
+    cursor: pointer;
+    line-height: 0;
+  }
+
+  .icon-btn:hover { background: var(--bg-sunken); color: var(--text); }
+  .icon-btn svg { width: 18px; height: 18px; }
+
+  .add-row {
+    display: flex;
+    gap: 8px;
+    margin: 4px 0 22px;
+  }
+
+  .add-row .btn { flex: 1; }
+
+  /* ---------- Toolbar / search ---------- */
+
+  .toolbar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
+  .field {
+    width: 100%;
+    padding: 11px 13px;
+    border-radius: var(--radius-sm);
+    border: 2px solid var(--line-strong);
+    background: var(--bg-elev);
+    color: var(--text);
+  }
+
+  .field:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  textarea.field { min-height: 130px; resize: vertical; }
+
+  .chips {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 16px;
+    scrollbar-width: none;
+  }
+
+  .chips::-webkit-scrollbar { display: none; }
+
+  .chip {
+    flex: none;
+    border: 1.5px solid var(--line-strong);
+    background: var(--bg-elev);
+    color: var(--text-soft);
+    border-radius: var(--radius-sm);
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    cursor: pointer;
+  }
+
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--line-strong);
+    color: #fffcf6;
+  }
+
+  /* ---------- Empty state ---------- */
+
+  .empty {
+    text-align: center;
+    padding: 32px 20px;
+    color: var(--text-soft);
+    font-size: 14px;
+    font-style: italic;
+    background: var(--bg-elev);
+    border: 2px dashed var(--line);
+    border-radius: var(--radius);
+    margin-bottom: 14px;
+  }
+
+  /* ---------- Settings ---------- */
+
+  .panel {
+    background: var(--bg-elev);
+    border: 2px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+  }
+
+  .panel h2 {
+    margin: 0 0 4px;
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .panel p { margin: 0 0 12px; font-size: 13.5px; color: var(--text-soft); }
+  .panel .btn + .btn { margin-top: 8px; }
+
+  /* ---------- Tabbar ---------- */
+
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    background: var(--bg-elev);
+    border-top: 2px solid var(--line-strong);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .tabbar__btn {
+    appearance: none;
+    background: none;
+    border: 0;
+    border-top: 3px solid transparent;
+    margin-top: -3px;
+    padding: 9px 1px 10px;
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .tabbar__btn svg { width: 20px; height: 20px; }
+
+  .tabbar__btn[aria-selected="true"] {
+    color: var(--accent);
+    border-top-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  /* ---------- Dialog ---------- */
+
+  dialog {
+    border: 0;
+    padding: 0;
+    background: transparent;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  dialog::backdrop { background: rgba(36, 31, 24, .55); }
+
+  .sheet {
+    background: var(--bg-elev);
+    color: var(--text);
+    border: 2px solid var(--line-strong);
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    padding: 18px 16px calc(18px + env(safe-area-inset-bottom));
+    max-width: 620px;
+    margin: 0 auto;
+  }
+
+  dialog {
+    margin: auto auto 0;
+    animation: slideUp .18s ease;
+  }
+
+  @keyframes slideUp { from { transform: translateY(16px); opacity: .6; } }
+
+  .sheet h2 {
+    margin: 0 0 16px;
+    font-family: var(--serif);
+    font-size: 21px;
+    font-weight: 600;
+  }
+
+  .sheet label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin: 0 0 5px;
+  }
+
+  .sheet .form-row { margin-bottom: 13px; }
+
+  .sheet__actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .sheet__actions .btn { flex: 1; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
+    transform: translate(-50%, 12px);
+    background: var(--text);
+    color: var(--bg-elev);
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .2s ease, transform .2s ease;
+    z-index: 60;
+  }
+
+  .toast--show { opacity: 1; transform: translate(-50%, 0); }
+
+  .sr-only {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="app-bar">
+  <div class="app-bar__row">
+    <h1 id="viewTitle">Heute</h1>
+    <span class="app-bar__brand">Alltag+</span>
+  </div>
+  <p class="app-bar__date" id="dateLine"></p>
+</header>
+
+<main>
+  <!-- ============ TÄGLICH ============ -->
+  <section class="view" id="view-daily" role="tabpanel" aria-labelledby="tab-daily">
+    <p class="view__intro">Setzt sich jede Nacht um 00:00 Uhr automatisch zurück.</p>
+    <div class="progress-card">
+      <div class="progress-card__head">
+        <span>Fortschritt heute</span>
+        <span class="progress-card__count" data-progress-count="daily">0 / 0</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" data-progress-fill="daily"></div></div>
+      <p class="progress-card__hint" data-progress-hint="daily"></p>
+    </div>
+    <div data-list="daily"></div>
+    <div class="add-row">
+      <button class="btn" data-add-task="daily">+ Tägliche Aufgabe</button>
+    </div>
+  </section>
+
+  <!-- ============ WÖCHENTLICH ============ -->
+  <section class="view" id="view-weekly" role="tabpanel" aria-labelledby="tab-weekly" hidden>
+    <p class="view__intro">Setzt sich jeden Montag automatisch zurück.</p>
+    <div class="progress-card">
+      <div class="progress-card__head">
+        <span>Fortschritt diese Woche</span>
+        <span class="progress-card__count" data-progress-count="weekly">0 / 0</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" data-progress-fill="weekly"></div></div>
+      <p class="progress-card__hint" data-progress-hint="weekly"></p>
+    </div>
+    <div data-list="weekly"></div>
+    <div class="add-row">
+      <button class="btn" data-add-task="weekly">+ Wöchentliche Aufgabe</button>
+    </div>
+  </section>
+
+  <!-- ============ MONATLICH ============ -->
+  <section class="view" id="view-monthly" role="tabpanel" aria-labelledby="tab-monthly" hidden>
+    <p class="view__intro">Setzt sich am Monatsersten automatisch zurück.</p>
+    <div class="progress-card">
+      <div class="progress-card__head">
+        <span>Fortschritt diesen Monat</span>
+        <span class="progress-card__count" data-progress-count="monthly">0 / 0</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" data-progress-fill="monthly"></div></div>
+      <p class="progress-card__hint" data-progress-hint="monthly"></p>
+    </div>
+    <div data-list="monthly"></div>
+    <div class="add-row">
+      <button class="btn" data-add-task="monthly">+ Monatliche Aufgabe</button>
+    </div>
+  </section>
+
+  <!-- ============ EINKAUF ============ -->
+  <section class="view" id="view-shopping" role="tabpanel" aria-labelledby="tab-shopping" hidden>
+    <p class="view__intro">Schnell tippen, abhaken, fertig. Abgehakte Sachen rutschen nach unten.</p>
+    <form class="quickadd" id="quickAddForm">
+      <label class="sr-only" for="quickAddInput">Artikel</label>
+      <input class="field" id="quickAddInput" placeholder="z. B. 2x Milch" maxlength="80" autocomplete="off" />
+      <button type="submit" class="btn quickadd__btn" aria-label="Artikel hinzufügen">+</button>
+      <label class="sr-only" for="quickAddCat">Abteilung</label>
+      <select class="field quickadd__cat" id="quickAddCat"></select>
+    </form>
+    <p class="fav-label" id="favLabel" hidden>Häufig gekauft</p>
+    <div class="chips" id="favChips"></div>
+    <div data-list="shopping"></div>
+    <div class="add-row">
+      <button class="btn btn--secondary" id="clearDoneBtn">Abgehaktes löschen</button>
+    </div>
+  </section>
+
+  <!-- ============ NOTIZEN ============ -->
+  <section class="view" id="view-notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
+    <div class="toolbar">
+      <input class="field" type="search" id="noteSearch" placeholder="Notizen durchsuchen …" autocomplete="off" />
+    </div>
+    <div class="chips" id="noteChips"></div>
+    <div data-list="notes"></div>
+    <div class="add-row">
+      <button class="btn" id="addNoteBtn">+ Neue Notiz</button>
+    </div>
+  </section>
+
+  <!-- ============ MEHR ============ -->
+  <section class="view" id="view-more" role="tabpanel" aria-labelledby="tab-more" hidden>
+    <div class="panel">
+      <h2>Überblick</h2>
+      <p id="statsLine">–</p>
+    </div>
+
+    <div class="panel">
+      <h2>Daten sichern</h2>
+      <p>Alles liegt nur lokal auf diesem Gerät. Vor einem Handy-Wechsel bitte exportieren.</p>
+      <button class="btn btn--block" id="exportBtn">Backup exportieren (.json)</button>
+      <button class="btn btn--secondary btn--block" id="importBtn">Backup importieren</button>
+      <input type="file" id="importFile" accept="application/json,.json" class="sr-only" />
+    </div>
+
+    <div class="panel">
+      <h2>Aufräumen</h2>
+      <p>Häkchen zurücksetzen, ohne Aufgaben zu löschen.</p>
+      <button class="btn btn--secondary btn--block" data-reset="daily">Tägliche Häkchen zurücksetzen</button>
+      <button class="btn btn--secondary btn--block" data-reset="weekly">Wöchentliche Häkchen zurücksetzen</button>
+      <button class="btn btn--secondary btn--block" data-reset="monthly">Monatliche Häkchen zurücksetzen</button>
+      <button class="btn btn--secondary btn--block" id="clearShoppingBtn">Einkaufszettel komplett leeren</button>
+    </div>
+
+    <div class="panel">
+      <h2>Zurücksetzen</h2>
+      <p>Löscht alle Aufgaben und Notizen auf diesem Gerät und lädt die Beispieldaten neu.</p>      <button class="btn btn--danger btn--block" id="wipeBtn">Alles löschen</button>
+    </div>
+
+    <div class="panel">
+      <h2>Über</h2>
+      <p style="margin:0">Alltag+ · offline nutzbar · zum Installieren im Browser-Menü „Zum Startbildschirm hinzufügen“ wählen.</p>
+    </div>
+  </section>
+</main>
+
+<nav class="tabbar" role="tablist" aria-label="Bereiche">
+  <button class="tabbar__btn" role="tab" id="tab-daily" data-tab="daily" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
+    Heute
+  </button>
+  <button class="tabbar__btn" role="tab" id="tab-weekly" data-tab="weekly" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+    Woche
+  </button>
+  <button class="tabbar__btn" role="tab" id="tab-monthly" data-tab="monthly" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M8 15h.01M12 15h.01M16 15h.01"/></svg>
+    Monat
+  </button>
+  <button class="tabbar__btn" role="tab" id="tab-shopping" data-tab="shopping" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h2l2.2 10.4a2 2 0 0 0 2 1.6h7a2 2 0 0 0 2-1.6L21 8H7"/><circle cx="10" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
+    Einkauf
+  </button>
+  <button class="tabbar__btn" role="tab" id="tab-notes" data-tab="notes" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h9l5 5v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M14 3v6h5M8 13h8M8 17h5"/></svg>
+    Notizen
+  </button>
+  <button class="tabbar__btn" role="tab" id="tab-more" data-tab="more" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>
+    Mehr
+  </button>
+</nav>
+
+<!-- ============ Dialoge ============ -->
+<dialog id="taskDialog">
+  <form method="dialog" class="sheet" id="taskForm">
+    <h2 id="taskDialogTitle">Aufgabe</h2>
+    <div class="form-row">
+      <label for="taskTitle">Aufgabe</label>
+      <input class="field" id="taskTitle" name="title" required maxlength="120" placeholder="z. B. Küche sauber machen" />
+    </div>
+    <div class="form-row">
+      <label for="taskGroup">Bereich</label>
+      <input class="field" id="taskGroup" name="group" list="groupOptions" maxlength="40" placeholder="z. B. Küche" />
+      <datalist id="groupOptions"></datalist>
+    </div>
+    <div class="form-row">
+      <label for="taskCadence">Rhythmus</label>
+      <select class="field" id="taskCadence" name="cadence">
+        <option value="daily">Täglich</option>
+        <option value="weekly">Wöchentlich</option>
+        <option value="monthly">Monatlich</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <label for="taskNote">Notiz (optional)</label>
+      <input class="field" id="taskNote" name="note" maxlength="160" placeholder="Detail, Ort, Hinweis …" />
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="noteDialog">
+  <form method="dialog" class="sheet" id="noteForm">
+    <h2 id="noteDialogTitle">Notiz</h2>
+    <div class="form-row">
+      <label for="noteCategory">Kategorie</label>
+      <input class="field" id="noteCategory" name="category" list="categoryOptions" maxlength="40" placeholder="z. B. WLAN-Passwörter" />
+      <datalist id="categoryOptions"></datalist>
+    </div>
+    <div class="form-row">
+      <label for="noteTitle">Titel</label>
+      <input class="field" id="noteTitle" name="title" required maxlength="120" placeholder="z. B. WLAN Zuhause" />
+    </div>
+    <div class="form-row">
+      <label for="noteBody">Inhalt</label>
+      <textarea class="field" id="noteBody" name="body" maxlength="8000" placeholder="Text, Passwort, Liste, Rezept …"></textarea>
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "AlltagPlus.v1";
+  var CADENCES = ["daily", "weekly", "monthly"];
+  var CADENCE_LABEL = { daily: "Täglich", weekly: "Wöchentlich", monthly: "Monatlich" };
+  var VIEW_TITLE = { daily: "Heute", weekly: "Diese Woche", monthly: "Dieser Monat", shopping: "Einkaufszettel", notes: "Merkzettel", more: "Mehr" };
+
+  // ---------- Helpers ----------
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+
+  function byName(a, b) {
+    return String(a).localeCompare(String(b), "de", { sensitivity: "base", numeric: true });
+  }
+
+  function isoWeek(d) {
+    var t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    t.setDate(t.getDate() + 3 - ((t.getDay() + 6) % 7));
+    var week1 = new Date(t.getFullYear(), 0, 4);
+    var diff = (t - week1) / 86400000;
+    var week = 1 + Math.round((diff - 3 + ((week1.getDay() + 6) % 7)) / 7);
+    return t.getFullYear() + "-W" + pad(week);
+  }
+
+  function periodKey(cadence, date) {
+    var d = date || new Date();
+    if (cadence === "daily") return "D" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+    if (cadence === "weekly") return "W" + isoWeek(d);
+    return "M" + d.getFullYear() + "-" + pad(d.getMonth() + 1);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "";
+    var d = new Date(iso);
+    if (isNaN(d)) return "";
+    return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  }
+
+  function el(tag, className, text) {
+    var n = document.createElement(tag);
+    if (className) n.className = className;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
+  function icon(paths, extra) {
+    var ns = "http://www.w3.org/2000/svg";
+    var svg = document.createElementNS(ns, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("stroke", "currentColor");
+    svg.setAttribute("stroke-width", extra && extra.width ? extra.width : "2");
+    svg.setAttribute("stroke-linecap", "round");
+    svg.setAttribute("stroke-linejoin", "round");
+    svg.setAttribute("aria-hidden", "true");
+    paths.forEach(function (d) {
+      var p = document.createElementNS(ns, "path");
+      p.setAttribute("d", d);
+      svg.appendChild(p);
+    });
+    return svg;
+  }
+
+  var ICON = {
+    check: ["M20 6 9 17l-5-5"],
+    chevron: ["m9 6 6 6-6 6"],
+    edit: ["M12 20h9", "M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"],
+    trash: ["M3 6h18", "M8 6V4h8v2", "M19 6l-1 14H6L5 6", "M10 11v6M14 11v6"],
+    copy: ["M9 9h10v10a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V9z", "M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"],
+    pin: ["M12 17v5", "M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z"]
+  };
+
+  var toastTimer;
+  function toast(msg) {
+    var t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("toast--show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("toast--show"); }, 2000);
+  }
+
+  // ---------- State ----------
+
+  function seed() {
+    var t = [];
+    function task(title, cadence, group, note) {
+      t.push({ id: uid(), title: title, cadence: cadence, group: group, note: note || "", donePeriod: null, lastDone: null, createdAt: new Date().toISOString() });
+    }
+    task("Küche sauber machen", "daily", "Küche");
+    task("Spülmaschine ausräumen", "daily", "Küche");
+    task("Betten aufschütteln", "daily", "Schlafzimmer");
+    task("Müll runterbringen", "daily", "Haushalt");
+    task("Kurz durchlüften", "daily", "Haushalt");
+    task("10 Minuten aufräumen", "daily", "Haushalt");
+
+    task("Staubsaugen", "weekly", "Putzen");
+    task("Bad putzen", "weekly", "Putzen");
+    task("Bettwäsche wechseln", "weekly", "Schlafzimmer");
+    task("Wocheneinkauf planen", "weekly", "Organisation");
+    task("Kühlschrank ausmisten", "weekly", "Küche");
+
+    task("Fenster putzen", "monthly", "Putzen");
+    task("Kontoauszüge prüfen", "monthly", "Finanzen");
+    task("Abos & Verträge checken", "monthly", "Finanzen");
+    task("Backup vom Handy machen", "monthly", "Technik");
+    task("Filter / Staubsauger reinigen", "monthly", "Haushalt");
+
+    var n = [];
+    function note(category, title, body) {
+      n.push({ id: uid(), category: category, title: title, body: body, pinned: false, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+    }
+    note("WLAN-Passwörter", "WLAN Zuhause", "Netz: \nPasswort: ");
+    note("WLAN-Passwörter", "WLAN bei Mama & Papa", "Netz: \nPasswort: ");
+    note("Geschenkideen", "Ideen für …", "– \n– ");
+    note("Wunschliste", "Was ich mir noch kaufen will", "– \n– ");
+    note("Wunschliste", "Fürs Haus", "– \n– ");
+    note("Games", "Durchgespielt", "– ");
+    note("Rezepte", "Lieblingsrezept", "Zutaten:\n– \n\nZubereitung:\n1. ");
+    note("Filme & Serien", "Will ich noch sehen", "– ");
+    note("Kleinanzeigen", "Anzeigentext (Vorlage)", "Titel:\n\nBeschreibung:\n\nPreis:\nVersand: ");
+
+    return {
+      tasks: t,
+      notes: n,
+      shopping: [],
+      shopFavs: {
+        "milch": { title: "Milch", count: 3, category: "Kühlregal" },
+        "brot": { title: "Brot", count: 3, category: "Vorrat" },
+        "eier": { title: "Eier", count: 2, category: "Kühlregal" },
+        "butter": { title: "Butter", count: 2, category: "Kühlregal" },
+        "kaffee": { title: "Kaffee", count: 2, category: "Vorrat" },
+        "bananen": { title: "Bananen", count: 2, category: "Obst & Gemüse" },
+        "klopapier": { title: "Klopapier", count: 2, category: "Drogerie" },
+        "spülmittel": { title: "Spülmittel", count: 1, category: "Haushalt" }
+      },
+      ui: { openGroups: {}, tab: "daily", noteFilter: "*", lastShopCat: "Sonstiges" }
+    };
+  }
+
+  var state;
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return seed();
+      var parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return seed();
+      parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
+      parsed.shopFavs = (parsed.shopFavs && typeof parsed.shopFavs === "object") ? parsed.shopFavs : {};
+      parsed.ui = parsed.ui || {};
+      parsed.ui.openGroups = parsed.ui.openGroups || {};
+      return parsed;
+    } catch (e) {
+      return seed();
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      toast("Speichern fehlgeschlagen – Speicher voll?");
+    }
+  }
+
+  // ---------- Task logic ----------
+
+  function tasksOf(cadence) {
+    return state.tasks.filter(function (t) { return t.cadence === cadence; });
+  }
+
+  function isDone(task) {
+    return !!task.donePeriod && task.donePeriod === periodKey(task.cadence);
+  }
+
+  function toggleTask(id) {
+    var task = state.tasks.find(function (t) { return t.id === id; });
+    if (!task) return;
+    if (isDone(task)) {
+      task.donePeriod = null;
+    } else {
+      task.donePeriod = periodKey(task.cadence);
+      task.lastDone = new Date().toISOString();
+    }
+    save();
+    renderTasks(task.cadence);
+    renderStats();
+  }
+
+  function groupsOf(cadence) {
+    var map = new Map();
+    tasksOf(cadence).forEach(function (t) {
+      var g = (t.group || "").trim() || "Allgemein";
+      if (!map.has(g)) map.set(g, []);
+      map.get(g).push(t);
+    });
+    return Array.from(map.entries())
+      .map(function (entry) {
+        return [entry[0], entry[1].slice().sort(function (a, b) { return byName(a.title, b.title); })];
+      })
+      .sort(function (a, b) { return byName(a[0], b[0]); });
+  }
+
+  function accordionKey(scope, name) { return scope + "::" + name; }
+
+  function buildAccordion(scope, name, count, doneCount) {
+    var key = accordionKey(scope, name);
+    var details = el("details", "acc");
+    details.open = state.ui.openGroups[key] !== false;
+    details.addEventListener("toggle", function () {
+      state.ui.openGroups[key] = details.open;
+      save();
+    });
+
+    var summary = el("summary");
+    var chev = icon(ICON.chevron);
+    chev.setAttribute("class", "acc__chevron");
+    summary.appendChild(chev);
+    summary.appendChild(el("span", "acc__title", name));
+
+    var badge = el("span", "acc__badge");
+    if (doneCount == null) {
+      badge.textContent = String(count);
+    } else {
+      badge.textContent = doneCount + " / " + count;
+      if (count > 0 && doneCount === count) badge.classList.add("acc__badge--done");
+    }
+    summary.appendChild(badge);
+
+    details.appendChild(summary);
+    var body = el("div", "acc__body");
+    details.appendChild(body);
+    return { root: details, body: body };
+  }
+
+  function taskRow(task) {
+    var row = el("div", "task" + (isDone(task) ? " task--done" : ""));
+
+    var check = el("button", "task__check");
+    check.type = "button";
+    check.setAttribute("aria-pressed", isDone(task) ? "true" : "false");
+    check.setAttribute("aria-label", (isDone(task) ? "Erledigt: " : "Offen: ") + task.title);
+    check.appendChild(icon(ICON.check, { width: "3" }));
+    check.addEventListener("click", function () { toggleTask(task.id); });
+    row.appendChild(check);
+
+    var main = el("div", "task__main");
+    main.appendChild(el("span", "task__title", task.title));
+    var metaParts = [];
+    if (task.note) metaParts.push(task.note);
+    if (task.lastDone) metaParts.push("zuletzt " + formatDate(task.lastDone));
+    if (metaParts.length) main.appendChild(el("span", "task__meta", metaParts.join(" · ")));
+    main.addEventListener("click", function () { toggleTask(task.id); });
+    row.appendChild(main);
+
+    var tools = el("div", "task__tools");
+
+    var edit = el("button", "icon-btn");
+    edit.type = "button";
+    edit.title = "Bearbeiten";
+    edit.setAttribute("aria-label", "Aufgabe bearbeiten: " + task.title);
+    edit.appendChild(icon(ICON.edit));
+    edit.addEventListener("click", function () { openTaskDialog(task.cadence, task); });
+    tools.appendChild(edit);
+
+    var del = el("button", "icon-btn");
+    del.type = "button";
+    del.title = "Löschen";
+    del.setAttribute("aria-label", "Aufgabe löschen: " + task.title);
+    del.appendChild(icon(ICON.trash));
+    del.addEventListener("click", function () {
+      if (!confirm("„" + task.title + "“ wirklich löschen?")) return;
+      state.tasks = state.tasks.filter(function (t) { return t.id !== task.id; });
+      save();
+      renderTasks(task.cadence);
+      renderStats();
+      toast("Aufgabe gelöscht");
+    });
+    tools.appendChild(del);
+
+    row.appendChild(tools);
+    return row;
+  }
+
+  function renderTasks(cadence) {
+    var host = document.querySelector('[data-list="' + cadence + '"]');
+    host.textContent = "";
+
+    var all = tasksOf(cadence);
+    var doneTotal = all.filter(isDone).length;
+
+    if (!all.length) {
+      host.appendChild(el("div", "empty", "Noch keine Aufgaben in diesem Rhythmus. Leg unten die erste an."));
+    } else {
+      groupsOf(cadence).forEach(function (entry) {
+        var name = entry[0];
+        var items = entry[1];
+        var done = items.filter(isDone).length;
+        var acc = buildAccordion(cadence, name, items.length, done);
+        items.forEach(function (t) { acc.body.appendChild(taskRow(t)); });
+        host.appendChild(acc.root);
+      });
+    }
+
+    var pct = all.length ? Math.round((doneTotal / all.length) * 100) : 0;
+    document.querySelector('[data-progress-count="' + cadence + '"]').textContent = doneTotal + " / " + all.length;
+    document.querySelector('[data-progress-fill="' + cadence + '"]').style.width = pct + "%";
+    var hint = document.querySelector('[data-progress-hint="' + cadence + '"]');
+    if (!all.length) hint.textContent = "";
+    else if (doneTotal === all.length) hint.textContent = "Alles erledigt. Stark!";
+    else hint.textContent = (all.length - doneTotal) + " offen · " + pct + " % geschafft";
+  }
+
+  // ---------- Notes ----------
+
+  function noteCategories() {
+    var set = [];
+    state.notes.forEach(function (n) {
+      var c = (n.category || "").trim() || "Allgemein";
+      if (set.indexOf(c) === -1) set.push(c);
+    });
+    return set.sort(byName);
+  }
+
+  function renderChips() {
+    var host = document.getElementById("noteChips");
+    host.textContent = "";
+    var cats = ["*"].concat(noteCategories());
+    cats.forEach(function (c) {
+      var b = el("button", "chip", c === "*" ? "Alle" : c);
+      b.type = "button";
+      b.setAttribute("aria-pressed", (state.ui.noteFilter || "*") === c ? "true" : "false");
+      b.addEventListener("click", function () {
+        state.ui.noteFilter = c;
+        save();
+        renderChips();
+        renderNotes();
+      });
+      host.appendChild(b);
+    });
+  }
+
+  function copyText(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast("Kopiert"); }, function () { toast("Kopieren nicht möglich"); });
+      return;
+    }
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); toast("Kopiert"); } catch (e) { toast("Kopieren nicht möglich"); }
+    document.body.removeChild(ta);
+  }
+
+  function noteCard(note) {
+    var card = el("article", "note");
+
+    var head = el("div", "note__head");
+    if (note.pinned) {
+      var dot = el("span", "pin-dot", "★");
+      dot.title = "Angepinnt";
+      head.appendChild(dot);
+    }
+    head.appendChild(el("h3", "note__title", note.title));
+
+    var pin = el("button", "icon-btn");
+    pin.type = "button";
+    pin.title = note.pinned ? "Loslösen" : "Anpinnen";
+    pin.setAttribute("aria-label", pin.title + ": " + note.title);
+    pin.appendChild(icon(ICON.pin));
+    pin.addEventListener("click", function () {
+      note.pinned = !note.pinned;
+      save();
+      renderNotes();
+    });
+    head.appendChild(pin);
+
+    var edit = el("button", "icon-btn");
+    edit.type = "button";
+    edit.title = "Bearbeiten";
+    edit.setAttribute("aria-label", "Notiz bearbeiten: " + note.title);
+    edit.appendChild(icon(ICON.edit));
+    edit.addEventListener("click", function () { openNoteDialog(note); });
+    head.appendChild(edit);
+
+    var del = el("button", "icon-btn");
+    del.type = "button";
+    del.title = "Löschen";
+    del.setAttribute("aria-label", "Notiz löschen: " + note.title);
+    del.appendChild(icon(ICON.trash));
+    del.addEventListener("click", function () {
+      if (!confirm("Notiz „" + note.title + "“ wirklich löschen?")) return;
+      state.notes = state.notes.filter(function (n) { return n.id !== note.id; });
+      save();
+      renderChips();
+      renderNotes();
+      renderStats();
+      toast("Notiz gelöscht");
+    });
+    head.appendChild(del);
+
+    card.appendChild(head);
+
+    if (note.body) {
+      var body = el("p", "note__body note__body--clamped", note.body);
+      card.appendChild(body);
+
+      var foot = el("div", "note__foot");
+      var isLong = note.body.split("\n").length > 4 || note.body.length > 220;
+      if (isLong) {
+        var more = el("button", "btn btn--ghost", "Mehr anzeigen");
+        more.type = "button";
+        more.addEventListener("click", function () {
+          var clamped = body.classList.toggle("note__body--clamped");
+          more.textContent = clamped ? "Mehr anzeigen" : "Weniger anzeigen";
+        });
+        foot.appendChild(more);
+      }
+      var copy = el("button", "btn btn--ghost", "Kopieren");
+      copy.type = "button";
+      copy.addEventListener("click", function () { copyText(note.body); });
+      foot.appendChild(copy);
+      foot.appendChild(el("span", "note__date", "geändert " + formatDate(note.updatedAt || note.createdAt)));
+      card.appendChild(foot);
+    }
+
+    return card;
+  }
+
+  function renderNotes() {
+    var host = document.querySelector('[data-list="notes"]');
+    host.textContent = "";
+
+    var q = (document.getElementById("noteSearch").value || "").trim().toLowerCase();
+    var filter = state.ui.noteFilter || "*";
+
+    var visible = state.notes.filter(function (n) {
+      var cat = (n.category || "").trim() || "Allgemein";
+      if (filter !== "*" && cat !== filter) return false;
+      if (!q) return true;
+      return (n.title + " " + (n.body || "") + " " + cat).toLowerCase().indexOf(q) !== -1;
+    });
+
+    if (!visible.length) {
+      host.appendChild(el("div", "empty", q ? "Nichts gefunden." : "Noch keine Notizen in diesem Bereich."));
+      return;
+    }
+
+    var byCat = new Map();
+    visible.forEach(function (n) {
+      var cat = (n.category || "").trim() || "Allgemein";
+      if (!byCat.has(cat)) byCat.set(cat, []);
+      byCat.get(cat).push(n);
+    });
+
+    Array.from(byCat.entries())
+      .sort(function (a, b) { return byName(a[0], b[0]); })
+      .forEach(function (entry) {
+        var items = entry[1].slice().sort(function (a, b) {
+          if (!!b.pinned !== !!a.pinned) return b.pinned ? 1 : -1;
+          return byName(a.title, b.title);
+        });
+        var acc = buildAccordion("notes", entry[0], items.length, null);
+        if (q) acc.root.open = true;
+        items.forEach(function (n) { acc.body.appendChild(noteCard(n)); });
+        host.appendChild(acc.root);
+      });
+  }
+
+  // ---------- Einkaufsliste ----------
+
+  var SHOP_CATS = ["Drogerie", "Getränke", "Haushalt", "Kühlregal", "Obst & Gemüse", "Sonstiges", "Vorrat"].sort(byName);
+
+  // "2x Milch" / "3 Äpfel" -> Menge separat anzeigen
+  function splitQuantity(raw) {
+    var m = /^(\d{1,3})\s*(?:x|×|st(?:k|ück)?\.?)?\s+(.+)$/i.exec(raw);
+    if (m) return { qty: m[1] + "×", title: m[2].trim() };
+    return { qty: "", title: raw };
+  }
+
+  function addShopItem(raw, category) {
+    var text = (raw || "").trim();
+    if (!text) return;
+    var parts = splitQuantity(text);
+    var cat = (category || "").trim() || "Sonstiges";
+
+    var existing = state.shopping.find(function (i) {
+      return !i.done && i.title.toLowerCase() === parts.title.toLowerCase();
+    });
+    if (existing) {
+      existing.category = cat;
+      existing.done = false;
+      toast("Steht schon auf der Liste");
+    } else {
+      state.shopping.push({
+        id: uid(), title: parts.title, qty: parts.qty, category: cat,
+        done: false, addedAt: new Date().toISOString()
+      });
+    }
+
+    var key = parts.title.toLowerCase();
+    var fav = state.shopFavs[key] || { title: parts.title, count: 0, category: cat };
+    fav.count += 1;
+    fav.title = parts.title;
+    fav.category = cat;
+    state.shopFavs[key] = fav;
+
+    state.ui.lastShopCat = cat;
+    save();
+    renderShopping();
+    renderStats();
+  }
+
+  function shopRow(item) {
+    var row = el("div", "shop" + (item.done ? " shop--done" : ""));
+
+    var check = el("button", "task__check");
+    check.type = "button";
+    check.setAttribute("aria-pressed", item.done ? "true" : "false");
+    check.setAttribute("aria-label", (item.done ? "Erledigt: " : "Offen: ") + item.title);
+    check.appendChild(icon(ICON.check, { width: "3" }));
+    check.addEventListener("click", function () {
+      item.done = !item.done;
+      save();
+      renderShopping();
+      renderStats();
+    });
+    row.appendChild(check);
+
+    var main = el("div", "shop__main");
+    main.appendChild(el("span", "shop__title", item.title));
+    main.addEventListener("click", function () {
+      item.done = !item.done;
+      save();
+      renderShopping();
+      renderStats();
+    });
+    row.appendChild(main);
+
+    if (item.qty) row.appendChild(el("span", "shop__qty", item.qty));
+
+    var del = el("button", "icon-btn");
+    del.type = "button";
+    del.title = "Entfernen";
+    del.setAttribute("aria-label", "Vom Einkaufszettel entfernen: " + item.title);
+    del.appendChild(icon(ICON.trash));
+    del.addEventListener("click", function () {
+      state.shopping = state.shopping.filter(function (i) { return i.id !== item.id; });
+      save();
+      renderShopping();
+      renderStats();
+    });
+    row.appendChild(del);
+
+    return row;
+  }
+
+  function renderShopCategories() {
+    var sel = document.getElementById("quickAddCat");
+    var current = state.ui.lastShopCat || "Sonstiges";
+    sel.textContent = "";
+    SHOP_CATS.forEach(function (c) {
+      var opt = el("option", null, c);
+      opt.value = c;
+      if (c === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderFavourites() {
+    var host = document.getElementById("favChips");
+    var label = document.getElementById("favLabel");
+    host.textContent = "";
+
+    var onList = state.shopping.filter(function (i) { return !i.done; })
+      .map(function (i) { return i.title.toLowerCase(); });
+
+    var favs = Object.keys(state.shopFavs)
+      .map(function (k) { return state.shopFavs[k]; })
+      .filter(function (f) { return onList.indexOf(f.title.toLowerCase()) === -1; })
+      .sort(function (a, b) { return b.count - a.count || byName(a.title, b.title); })
+      .slice(0, 12)
+      .sort(function (a, b) { return byName(a.title, b.title); });
+
+    label.hidden = favs.length === 0;
+    host.hidden = favs.length === 0;
+
+    favs.forEach(function (f) {
+      var b = el("button", "chip", f.title);
+      b.type = "button";
+      b.setAttribute("aria-label", f.title + " auf die Liste setzen");
+      b.addEventListener("click", function () { addShopItem(f.title, f.category); });
+      host.appendChild(b);
+    });
+  }
+
+  function renderShopping() {
+    var host = document.querySelector('[data-list="shopping"]');
+    host.textContent = "";
+
+    var open = state.shopping.filter(function (i) { return !i.done; });
+    var done = state.shopping.filter(function (i) { return i.done; });
+
+    if (!open.length && !done.length) {
+      host.appendChild(el("div", "empty", "Der Einkaufszettel ist leer. Oben eintippen oder einen Vorschlag antippen."));
+    }
+
+    var byCat = new Map();
+    open.forEach(function (i) {
+      var c = i.category || "Sonstiges";
+      if (!byCat.has(c)) byCat.set(c, []);
+      byCat.get(c).push(i);
+    });
+
+    Array.from(byCat.entries())
+      .sort(function (a, b) { return byName(a[0], b[0]); })
+      .forEach(function (entry) {
+        var acc = buildAccordion("shopping", entry[0], entry[1].length, null);
+        entry[1].slice()
+          .sort(function (a, b) { return byName(a.title, b.title); })
+          .forEach(function (i) { acc.body.appendChild(shopRow(i)); });
+        host.appendChild(acc.root);
+      });
+
+    if (done.length) {
+      var accDone = buildAccordion("shopping", "Im Wagen", done.length, done.length);
+      accDone.root.open = state.ui.openGroups["shopping::Im Wagen"] === true;
+      done.slice()
+        .sort(function (a, b) { return byName(a.title, b.title); })
+        .forEach(function (i) { accDone.body.appendChild(shopRow(i)); });
+      host.appendChild(accDone.root);
+    }
+
+    renderFavourites();
+  }
+
+  document.getElementById("quickAddForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("quickAddInput");
+    addShopItem(input.value, document.getElementById("quickAddCat").value);
+    input.value = "";
+    input.focus();
+  });
+
+  document.getElementById("quickAddCat").addEventListener("change", function (e) {
+    state.ui.lastShopCat = e.target.value;
+    save();
+  });
+
+  document.getElementById("clearDoneBtn").addEventListener("click", function () {
+    if (!state.shopping.some(function (i) { return i.done; })) {
+      toast("Nichts abgehakt");
+      return;
+    }
+    state.shopping = state.shopping.filter(function (i) { return !i.done; });
+    save();
+    renderShopping();
+    renderStats();
+    toast("Einkauf abgeschlossen");
+  });
+
+  // ---------- Dialogs ----------
+
+  var taskDialog = document.getElementById("taskDialog");
+  var taskForm = document.getElementById("taskForm");
+  var editingTaskId = null;
+
+  function openTaskDialog(cadence, task) {
+    editingTaskId = task ? task.id : null;
+    document.getElementById("taskDialogTitle").textContent = task ? "Aufgabe bearbeiten" : "Neue Aufgabe";
+    taskForm.title.value = task ? task.title : "";
+    taskForm.group.value = task ? (task.group || "") : "";
+    taskForm.note.value = task ? (task.note || "") : "";
+    taskForm.cadence.value = task ? task.cadence : cadence;
+
+    var dl = document.getElementById("groupOptions");
+    dl.textContent = "";
+    var seen = [];
+    state.tasks.forEach(function (t) {
+      var g = (t.group || "").trim();
+      if (g && seen.indexOf(g) === -1) seen.push(g);
+    });
+    seen.sort(byName).forEach(function (g) { dl.appendChild(el("option")).value = g; });
+
+    taskDialog.showModal();
+    setTimeout(function () { taskForm.title.focus(); }, 60);
+  }
+
+  taskForm.addEventListener("submit", function () {
+    var title = taskForm.title.value.trim();
+    if (!title) return;
+    var cadence = taskForm.cadence.value;
+    var group = taskForm.group.value.trim();
+    var note = taskForm.note.value.trim();
+
+    if (editingTaskId) {
+      var t = state.tasks.find(function (x) { return x.id === editingTaskId; });
+      if (t) {
+        var oldCadence = t.cadence;
+        t.title = title; t.group = group; t.note = note;
+        if (t.cadence !== cadence) { t.cadence = cadence; t.donePeriod = null; }
+        renderTasks(oldCadence);
+      }
+    } else {
+      state.tasks.push({ id: uid(), title: title, cadence: cadence, group: group, note: note, donePeriod: null, lastDone: null, createdAt: new Date().toISOString() });
+    }
+    save();
+    renderTasks(cadence);
+    renderStats();
+    switchTab(cadence);
+    toast("Gespeichert");
+  });
+
+  var noteDialog = document.getElementById("noteDialog");
+  var noteForm = document.getElementById("noteForm");
+  var editingNoteId = null;
+
+  function openNoteDialog(note) {
+    editingNoteId = note ? note.id : null;
+    document.getElementById("noteDialogTitle").textContent = note ? "Notiz bearbeiten" : "Neue Notiz";
+    noteForm.title.value = note ? note.title : "";
+    noteForm.body.value = note ? (note.body || "") : "";
+    var preset = note ? (note.category || "") : (state.ui.noteFilter && state.ui.noteFilter !== "*" ? state.ui.noteFilter : "");
+    noteForm.category.value = preset;
+
+    var dl = document.getElementById("categoryOptions");
+    dl.textContent = "";
+    noteCategories().forEach(function (c) { dl.appendChild(el("option")).value = c; });
+
+    noteDialog.showModal();
+    setTimeout(function () { noteForm.title.focus(); }, 60);
+  }
+
+  noteForm.addEventListener("submit", function () {
+    var title = noteForm.title.value.trim();
+    if (!title) return;
+    var category = noteForm.category.value.trim() || "Allgemein";
+    var body = noteForm.body.value;
+    var now = new Date().toISOString();
+
+    if (editingNoteId) {
+      var n = state.notes.find(function (x) { return x.id === editingNoteId; });
+      if (n) { n.title = title; n.category = category; n.body = body; n.updatedAt = now; }
+    } else {
+      state.notes.push({ id: uid(), category: category, title: title, body: body, pinned: false, createdAt: now, updatedAt: now });
+    }
+    save();
+    renderChips();
+    renderNotes();
+    renderStats();
+    toast("Gespeichert");
+  });
+
+  document.querySelectorAll("[data-close]").forEach(function (btn) {
+    btn.addEventListener("click", function () { btn.closest("dialog").close(); });
+  });
+
+  // ---------- Tabs ----------
+
+  function switchTab(tab) {
+    state.ui.tab = tab;
+    save();
+    document.querySelectorAll(".view").forEach(function (v) { v.hidden = v.id !== "view-" + tab; });
+    document.querySelectorAll(".tabbar__btn").forEach(function (b) {
+      b.setAttribute("aria-selected", b.dataset.tab === tab ? "true" : "false");
+    });
+    document.getElementById("viewTitle").textContent = VIEW_TITLE[tab] || "Alltag+";
+    window.scrollTo({ top: 0 });
+    if (tab === "more") renderStats();
+  }
+
+  document.querySelectorAll(".tabbar__btn").forEach(function (b) {
+    b.addEventListener("click", function () { switchTab(b.dataset.tab); });
+  });
+
+  CADENCES.forEach(function (c) {
+    document.querySelector('[data-add-task="' + c + '"]').addEventListener("click", function () { openTaskDialog(c, null); });
+  });
+
+  document.getElementById("addNoteBtn").addEventListener("click", function () { openNoteDialog(null); });
+  document.getElementById("noteSearch").addEventListener("input", renderNotes);
+
+  // ---------- Settings ----------
+
+  function renderStats() {
+    var open = state.tasks.filter(function (t) { return !isDone(t); }).length;
+    var toBuy = state.shopping.filter(function (i) { return !i.done; }).length;
+    document.getElementById("statsLine").textContent =
+      state.tasks.length + " Aufgaben (" + open + " offen) · " + toBuy + " Sachen einzukaufen · " +
+      state.notes.length + " Notizen · " +
+      CADENCES.map(function (c) { return tasksOf(c).length + "\u00a0" + CADENCE_LABEL[c].toLowerCase(); }).join(" · ");
+  }
+
+  document.querySelectorAll("[data-reset]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var c = btn.dataset.reset;
+      state.tasks.forEach(function (t) { if (t.cadence === c) t.donePeriod = null; });
+      save();
+      renderTasks(c);
+      renderStats();
+      toast("Häkchen zurückgesetzt");
+    });
+  });
+
+  document.getElementById("exportBtn").addEventListener("click", function () {
+    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    var d = new Date();
+    a.href = url;
+    a.download = "AlltagPlus-backup-" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  var importFile = document.getElementById("importFile");
+  document.getElementById("importBtn").addEventListener("click", function () { importFile.click(); });
+
+  importFile.addEventListener("change", function () {
+    var file = importFile.files && importFile.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var data = JSON.parse(String(reader.result));
+        if (!data || !Array.isArray(data.tasks) || !Array.isArray(data.notes)) throw new Error("bad");
+        if (!confirm("Backup einspielen? Die aktuellen Daten auf diesem Gerät werden ersetzt.")) return;
+        state = {
+          tasks: data.tasks,
+          notes: data.notes,
+          shopping: Array.isArray(data.shopping) ? data.shopping : [],
+          shopFavs: (data.shopFavs && typeof data.shopFavs === "object") ? data.shopFavs : {},
+          ui: data.ui || { openGroups: {}, tab: "daily", noteFilter: "*", lastShopCat: "Sonstiges" }
+        };
+        save();
+        renderAll();
+        toast("Backup eingespielt");
+      } catch (e) {
+        toast("Datei konnte nicht gelesen werden");
+      } finally {
+        importFile.value = "";
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  document.getElementById("wipeBtn").addEventListener("click", function () {
+    if (!confirm("Wirklich alle Aufgaben, Einkäufe und Notizen löschen?")) return;
+    state = seed();
+    save();
+    renderAll();
+    toast("Zurückgesetzt");
+  });
+
+  document.getElementById("clearShoppingBtn").addEventListener("click", function () {
+    if (!state.shopping.length) { toast("Zettel ist schon leer"); return; }
+    if (!confirm("Kompletten Einkaufszettel leeren?")) return;
+    state.shopping = [];
+    save();
+    renderShopping();
+    renderStats();
+    toast("Zettel geleert");
+  });
+
+  // ---------- Boot ----------
+
+  function renderDateLine() {
+    var d = new Date();
+    document.getElementById("dateLine").textContent =
+      d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" }) + " · KW " + isoWeek(d).split("-W")[1];
+  }
+
+  function renderAll() {
+    renderDateLine();
+    CADENCES.forEach(renderTasks);
+    renderShopCategories();
+    renderShopping();
+    renderChips();
+    renderNotes();
+    renderStats();
+    switchTab(state.ui.tab || "daily");
+  }
+
+  state = load();
+  renderAll();
+  save();
+
+  var lastDay = periodKey("daily");
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible") return;
+    if (periodKey("daily") !== lastDay) {
+      lastDay = periodKey("daily");
+      renderDateLine();
+      CADENCES.forEach(renderTasks);
+      renderStats();
+    }
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register("./sw.js").catch(function () { /* offline optional */ });
+    });
+  }
+})();
+</script>
+</body>
+</html>
