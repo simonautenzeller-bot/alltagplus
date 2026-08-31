@@ -8,7 +8,8 @@ Reines HTML/CSS/JS ohne Build-Schritt, funktioniert direkt über GitHub Pages.
 
 - **Heute / Woche / Monat** – eigene Tabs, jeweils mit Fortschrittsbalken und Accordions pro Bereich (Küche, Bad, Finanzen …).
 - **Automatischer Reset** – tägliche Häkchen fallen um Mitternacht weg, wöchentliche am Montag, monatliche am Monatsersten. Aufgaben bleiben erhalten.
-- **Einkauf** – Schnelleingabe mit Mengen-Erkennung („2x Milch“), Abteilungen (Obst & Gemüse, Kühlregal, Drogerie …), Vorschläge aus dem, was oft gekauft wird, und ein „Im Wagen“-Bereich für Abgehaktes.
+- **Einkauf** – Schnelleingabe mit Mengen-Erkennung („2x Milch“), frei erweiterbare Abteilungen (Obst & Gemüse, Kühlregal, Drogerie …), Vorschläge aus dem, was oft gekauft wird, und ein „Im Wagen“-Bereich für Abgehaktes.
+- **Gespeicherte Listen** – den aktuellen Zettel als Vorlage sichern (z. B. ein Rezept oder der Wocheneinkauf) und später per Tipp wieder auf den Zettel legen.
 - **Merkzettel** – Notizen nach Kategorien gruppiert, mit Suche, Kategorie-Filter, Anpinnen und „Kopieren“-Button (praktisch für WLAN-Passwörter und Anzeigentexte). Zeilen mit `- ` werden als Aufzählung dargestellt, Zeilen mit `[ ] ` als abhakbare Checkliste inklusive Fortschrittsanzeige.
 - **Backup** – Export/Import als JSON unter „Mehr“.
 - **Offline** – Service Worker cached die App, alle Daten liegen im `localStorage` des Geräts.

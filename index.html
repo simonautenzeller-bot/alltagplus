@@ -310,15 +310,26 @@
   /* ---------- Notes ---------- */
 
   .note {
-    padding: 12px 16px;
+    border-bottom: 1px solid var(--line);
   }
 
-  .note + .note { border-top: 1px solid var(--line); }
+  .note:last-child { border-bottom: 0; }
 
   .note__head {
+    list-style: none;
+    cursor: pointer;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 8px;
+    padding: 11px 14px;
+  }
+
+  .note__head::-webkit-details-marker { display: none; }
+
+  .note[open] .acc__chevron { transform: rotate(90deg); }
+
+  .note__content {
+    padding: 0 16px 12px 40px;
   }
 
   .note__title {
@@ -332,7 +343,7 @@
   }
 
   .note__body {
-    margin: 6px 0 0;
+    margin: 0 0 2px;
     font-size: 14px;
     color: var(--text);
     word-break: break-word;
@@ -387,13 +398,6 @@
 
   .note__check--done .note__check-box svg { opacity: 1; }
   .note__check--done .note__check-text { text-decoration: line-through; color: var(--text-soft); }
-
-  .note__body--clamped {
-    max-height: 6.4em;
-    overflow: hidden;
-    -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent);
-    mask-image: linear-gradient(to bottom, #000 70%, transparent);
-  }
 
   .note__progress {
     font-size: 11px;
@@ -477,6 +481,14 @@
     color: var(--accent);
     min-width: 34px;
     text-align: right;
+  }
+
+  .list-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--line);
   }
 
   /* ---------- Buttons ---------- */
@@ -849,7 +861,10 @@
     <div data-list="shopping"></div>
     <div class="add-row">
       <button class="btn btn--secondary" id="clearDoneBtn">Abgehaktes löschen</button>
+      <button class="btn btn--secondary" id="saveListBtn">Liste speichern</button>
     </div>
+    <p class="fav-label">Gespeicherte Listen</p>
+    <div data-list="shopLists"></div>
   </section>
 
   <!-- ============ NOTIZEN ============ -->
@@ -1001,6 +1016,20 @@
   </form>
 </dialog>
 
+<dialog id="listNameDialog">
+  <form method="dialog" class="sheet" id="listNameForm">
+    <h2 id="listNameTitle">Liste speichern</h2>
+    <div class="form-row">
+      <label for="listName">Name</label>
+      <input class="field" id="listName" name="name" required maxlength="60" placeholder="z. B. Spaghetti Bolognese" />
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -1135,6 +1164,19 @@
       notes: n,
       shopping: [],
       shopCats: [],
+      shopLists: [{
+        id: uid(),
+        name: "Spaghetti Bolognese",
+        createdAt: new Date().toISOString(),
+        items: [
+          { title: "Hackfleisch", qty: "500×", category: "Kühlregal" },
+          { title: "Passierte Tomaten", qty: "2×", category: "Vorrat" },
+          { title: "Spaghetti", qty: "", category: "Vorrat" },
+          { title: "Zwiebeln", qty: "2×", category: "Obst & Gemüse" },
+          { title: "Knoblauch", qty: "", category: "Obst & Gemüse" },
+          { title: "Parmesan", qty: "", category: "Kühlregal" }
+        ]
+      }],
       shopFavs: {
         "milch": { title: "Milch", count: 3, category: "Kühlregal" },
         "brot": { title: "Brot", count: 3, category: "Vorrat" },
@@ -1159,6 +1201,7 @@
       if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return seed();
       parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
       parsed.shopCats = Array.isArray(parsed.shopCats) ? parsed.shopCats : [];
+      parsed.shopLists = Array.isArray(parsed.shopLists) ? parsed.shopLists : [];
       parsed.shopFavs = (parsed.shopFavs && typeof parsed.shopFavs === "object") ? parsed.shopFavs : {};
       parsed.ui = parsed.ui || {};
       parsed.ui.openGroups = parsed.ui.openGroups || {};
@@ -1402,6 +1445,7 @@
   function updateCheckProgress(note, host) {
     var c = countChecks(note);
     host.textContent = c.total ? c.done + " / " + c.total : "";
+    host.classList.toggle("acc__badge--done", c.total > 0 && c.done === c.total);
   }
 
   function toggleCheckLine(note, idx) {
@@ -1475,10 +1519,25 @@
     return btn;
   }
 
-  function noteCard(note) {
-    var card = el("article", "note");
+  function noteCard(note, expand) {
+    var key = accordionKey("note", note.id);
+    var stored = state.ui.openGroups[key];
+    var card = el("details", "note");
+    card.open = expand || stored === true;
 
-    var head = el("div", "note__head");
+    var ready = false;
+    requestAnimationFrame(function () { ready = true; });
+    card.addEventListener("toggle", function () {
+      if (!ready || expand) return;
+      state.ui.openGroups[key] = card.open;
+      save();
+    });
+
+    var head = el("summary", "note__head");
+    var chev = icon(ICON.chevron);
+    chev.setAttribute("class", "acc__chevron");
+    head.appendChild(chev);
+
     if (note.pinned) {
       var dot = el("span", "pin-dot", "★");
       dot.title = "Angepinnt";
@@ -1486,32 +1545,37 @@
     }
     head.appendChild(el("h3", "note__title", note.title));
 
-    var pin = el("button", "icon-btn");
-    pin.type = "button";
-    pin.title = note.pinned ? "Loslösen" : "Anpinnen";
-    pin.setAttribute("aria-label", pin.title + ": " + note.title);
-    pin.appendChild(icon(ICON.pin));
-    pin.addEventListener("click", function () {
+    var checks = countChecks(note);
+    if (checks.total) {
+      var badge = el("span", "acc__badge", checks.done + " / " + checks.total);
+      badge.dataset.checkProgress = note.id;
+      if (checks.done === checks.total) badge.classList.add("acc__badge--done");
+      head.appendChild(badge);
+    }
+
+    function toolButton(iconPaths, label, handler) {
+      var btn = el("button", "icon-btn");
+      btn.type = "button";
+      btn.title = label;
+      btn.setAttribute("aria-label", label + ": " + note.title);
+      btn.appendChild(icon(iconPaths));
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handler();
+      });
+      return btn;
+    }
+
+    head.appendChild(toolButton(ICON.pin, note.pinned ? "Loslösen" : "Anpinnen", function () {
       note.pinned = !note.pinned;
       save();
       renderNotes();
-    });
-    head.appendChild(pin);
+    }));
 
-    var edit = el("button", "icon-btn");
-    edit.type = "button";
-    edit.title = "Bearbeiten";
-    edit.setAttribute("aria-label", "Notiz bearbeiten: " + note.title);
-    edit.appendChild(icon(ICON.edit));
-    edit.addEventListener("click", function () { openNoteDialog(note); });
-    head.appendChild(edit);
+    head.appendChild(toolButton(ICON.edit, "Bearbeiten", function () { openNoteDialog(note); }));
 
-    var del = el("button", "icon-btn");
-    del.type = "button";
-    del.title = "Löschen";
-    del.setAttribute("aria-label", "Notiz löschen: " + note.title);
-    del.appendChild(icon(ICON.trash));
-    del.addEventListener("click", function () {
+    head.appendChild(toolButton(ICON.trash, "Löschen", function () {
       if (!confirm("Notiz „" + note.title + "“ wirklich löschen?")) return;
       state.notes = state.notes.filter(function (n) { return n.id !== note.id; });
       save();
@@ -1519,44 +1583,29 @@
       renderNotes();
       renderStats();
       toast("Notiz gelöscht");
-    });
-    head.appendChild(del);
+    }));
 
     card.appendChild(head);
 
-    if (note.body) {
-      var body = el("div", "note__body note__body--clamped");
-      var checkTotal = 0;
-      body.appendChild(renderNoteBody(note, function (n) { checkTotal = n; }));
-      card.appendChild(body);
+    var content = el("div", "note__content");
 
-      var foot = el("div", "note__foot");
-      var isLong = note.body.split("\n").length > 4 || note.body.length > 220;
-      if (isLong) {
-        var more = el("button", "btn btn--ghost", "Mehr anzeigen");
-        more.type = "button";
-        more.addEventListener("click", function () {
-          var clamped = body.classList.toggle("note__body--clamped");
-          more.textContent = clamped ? "Mehr anzeigen" : "Weniger anzeigen";
-        });
-        foot.appendChild(more);
-      }
+    if (note.body) {
+      var body = el("div", "note__body");
+      body.appendChild(renderNoteBody(note));
+      content.appendChild(body);
+    }
+
+    var foot = el("div", "note__foot");
+    if (note.body) {
       var copy = el("button", "btn btn--ghost", "Kopieren");
       copy.type = "button";
       copy.addEventListener("click", function () { copyText(note.body); });
       foot.appendChild(copy);
-
-      if (checkTotal) {
-        var progress = el("span", "note__progress");
-        progress.dataset.checkProgress = note.id;
-        updateCheckProgress(note, progress);
-        foot.appendChild(progress);
-      }
-
-      foot.appendChild(el("span", "note__date", "geändert " + formatDate(note.updatedAt || note.createdAt)));
-      card.appendChild(foot);
     }
+    foot.appendChild(el("span", "note__date", "geändert " + formatDate(note.updatedAt || note.createdAt)));
+    content.appendChild(foot);
 
+    card.appendChild(content);
     return card;
   }
 
@@ -1598,7 +1647,7 @@
           acc.root.dataset.transient = "1";
           acc.root.open = true;
         }
-        items.forEach(function (n) { acc.body.appendChild(noteCard(n)); });
+        items.forEach(function (n) { acc.body.appendChild(noteCard(n, !!q)); });
         host.appendChild(acc.root);
       });
   }
@@ -1615,9 +1664,9 @@
     return { qty: "", title: raw };
   }
 
-  function addShopItem(raw, category) {
+  function pushShopItem(raw, category) {
     var text = (raw || "").trim();
-    if (!text) return;
+    if (!text) return null;
     var parts = splitQuantity(text);
     var cat = (category || "").trim() || "Sonstiges";
 
@@ -1627,7 +1676,6 @@
     if (existing) {
       existing.category = cat;
       existing.done = false;
-      toast("Steht schon auf der Liste");
     } else {
       state.shopping.push({
         id: uid(), title: parts.title, qty: parts.qty, category: cat,
@@ -1642,11 +1690,91 @@
     fav.category = cat;
     state.shopFavs[key] = fav;
 
-    state.ui.lastShopCat = cat;
+    return existing ? "exists" : "added";
+  }
+
+  function addShopItem(raw, category) {
+    var result = pushShopItem(raw, category);
+    if (!result) return;
+    if (result === "exists") toast("Steht schon auf der Liste");
+    state.ui.lastShopCat = (category || "").trim() || "Sonstiges";
     save();
     renderShopping();
     renderStats();
   }
+
+  // ---------- Gespeicherte Listen ----------
+
+  function itemToRaw(item) {
+    var qty = (item.qty || "").replace("×", "x");
+    return qty ? qty + " " + item.title : item.title;
+  }
+
+  function applyShopList(list) {
+    var added = 0;
+    list.items.forEach(function (i) {
+      if (pushShopItem(itemToRaw(i), i.category) === "added") added++;
+    });
+    save();
+    renderShopping();
+    renderStats();
+    toast(added ? added + " Sachen ergänzt" : "Steht alles schon drauf");
+  }
+
+  function shopListCard(list) {
+    var acc = buildAccordion("lists", list.name, list.items.length, null);
+    acc.root.open = state.ui.openGroups[accordionKey("lists", list.name)] === true;
+
+    list.items.slice()
+      .sort(function (a, b) { return byName(a.title, b.title); })
+      .forEach(function (i) {
+        var row = el("div", "shop");
+        row.appendChild(el("span", "shop__main", itemToRaw(i)));
+        row.appendChild(el("span", "shop__qty", i.category));
+        acc.body.appendChild(row);
+      });
+
+    var tools = el("div", "list-tools");
+
+    var use = el("button", "btn btn--ghost", "Auf den Zettel");
+    use.type = "button";
+    use.addEventListener("click", function () { applyShopList(list); });
+    tools.appendChild(use);
+
+    var rename = el("button", "btn btn--ghost", "Umbenennen");
+    rename.type = "button";
+    rename.addEventListener("click", function () { openListNameDialog(list); });
+    tools.appendChild(rename);
+
+    var del = el("button", "btn btn--ghost", "Löschen");
+    del.type = "button";
+    del.addEventListener("click", function () {
+      if (!confirm("Liste „" + list.name + "“ wirklich löschen?")) return;
+      state.shopLists = state.shopLists.filter(function (l) { return l.id !== list.id; });
+      save();
+      renderShopLists();
+      toast("Liste gelöscht");
+    });
+    tools.appendChild(del);
+
+    acc.body.appendChild(tools);
+    return acc.root;
+  }
+
+  function renderShopLists() {
+    var host = document.querySelector('[data-list="shopLists"]');
+    host.textContent = "";
+
+    if (!state.shopLists.length) {
+      host.appendChild(el("div", "empty", "Noch keine Liste gespeichert. Zettel füllen und auf „Liste speichern“ tippen."));
+      return;
+    }
+
+    state.shopLists.slice()
+      .sort(function (a, b) { return byName(a.name, b.name); })
+      .forEach(function (l) { host.appendChild(shopListCard(l)); });
+  }
+
 
   function shopRow(item) {
     var row = el("div", "shop" + (item.done ? " shop--done" : ""));
@@ -1829,6 +1957,46 @@
     if (e.target.value === NEW_CAT) { openShopCatDialog(); return; }
     state.ui.lastShopCat = e.target.value;
     save();
+  });
+
+  var listNameDialog = document.getElementById("listNameDialog");
+  var listNameForm = document.getElementById("listNameForm");
+  var editingListId = null;
+
+  function openListNameDialog(list) {
+    editingListId = list ? list.id : null;
+    document.getElementById("listNameTitle").textContent = list ? "Liste umbenennen" : "Liste speichern";
+    listNameForm.name.value = list ? list.name : "";
+    listNameDialog.showModal();
+    setTimeout(function () { listNameForm.name.focus(); }, 60);
+  }
+
+  listNameForm.addEventListener("submit", function () {
+    var name = listNameForm.name.value.trim();
+    if (!name) return;
+
+    if (editingListId) {
+      var l = state.shopLists.find(function (x) { return x.id === editingListId; });
+      if (l) l.name = name;
+      toast("Umbenannt");
+    } else {
+      state.shopLists.push({
+        id: uid(),
+        name: name,
+        createdAt: new Date().toISOString(),
+        items: state.shopping.map(function (i) {
+          return { title: i.title, qty: i.qty || "", category: i.category || "Sonstiges" };
+        })
+      });
+      toast("Liste gespeichert");
+    }
+    save();
+    renderShopLists();
+  });
+
+  document.getElementById("saveListBtn").addEventListener("click", function () {
+    if (!state.shopping.length) { toast("Zettel ist leer"); return; }
+    openListNameDialog(null);
   });
 
   document.getElementById("clearDoneBtn").addEventListener("click", function () {
@@ -2031,7 +2199,7 @@
     var toBuy = state.shopping.filter(function (i) { return !i.done; }).length;
     document.getElementById("statsLine").textContent =
       state.tasks.length + " Aufgaben (" + open + " offen) · " + toBuy + " Sachen einzukaufen · " +
-      state.notes.length + " Notizen · " +
+      state.shopLists.length + " gespeicherte Listen · " + state.notes.length + " Notizen · " +
       CADENCES.map(function (c) { return tasksOf(c).length + "\u00a0" + CADENCE_LABEL[c].toLowerCase(); }).join(" · ");
   }
 
@@ -2076,6 +2244,7 @@
           notes: data.notes,
           shopping: Array.isArray(data.shopping) ? data.shopping : [],
           shopCats: Array.isArray(data.shopCats) ? data.shopCats : [],
+          shopLists: Array.isArray(data.shopLists) ? data.shopLists : [],
           shopFavs: (data.shopFavs && typeof data.shopFavs === "object") ? data.shopFavs : {},
           ui: data.ui || { openGroups: {}, tab: "daily", noteFilter: "*", lastShopCat: "Sonstiges" }
         };
@@ -2122,6 +2291,7 @@
     CADENCES.forEach(renderTasks);
     renderShopCategories();
     renderShopping();
+    renderShopLists();
     renderChips();
     renderNotes();
     renderStats();
