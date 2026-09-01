@@ -1,4 +1,4 @@
-const CACHE_NAME = "AlltagPlus-v2";
+const CACHE_NAME = "AlltagPlus-v4";
 const APP_FILES = [
   "./",
   "./index.html",
