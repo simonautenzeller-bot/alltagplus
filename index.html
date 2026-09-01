@@ -5,49 +5,49 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>Alltag+</title>
 <meta name="description" content="Alltag+ – tägliche, wöchentliche und monatliche Aufgaben abhaken, Einkaufszettel führen und Merkzettel speichern." />
-<meta name="theme-color" content="#f6efe3" />
+<meta name="theme-color" content="#f5f5ef" />
 <link rel="manifest" href="./manifest.webmanifest" />
-<link rel="icon" href="./icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="./icon-192.png" />
+<link rel="icon" href="./icon.svg?v=2" type="image/svg+xml" />
+<link rel="apple-touch-icon" href="./icon-192.png?v=2" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="Alltag+" />
 <style>
   :root {
-    --bg: #f6efe3;
-    --bg-elev: #fffcf6;
-    --bg-sunken: #efe6d6;
-    --text: #241f18;
-    --text-soft: #7a6d5c;
-    --line: #ddd0ba;
-    --line-strong: #241f18;
-    --accent: #c1512a;
-    --accent-soft: #f7e3d8;
-    --ok: #2f6b4f;
-    --ok-soft: #dfeae1;
-    --warn: #a5750f;
-    --danger: #a8342c;
+    --bg: #f5f5ef;
+    --bg-elev: #fdfdf8;
+    --bg-sunken: #e7eadf;
+    --text: #29372c;
+    --text-soft: #657565;
+    --line: #cbd4c7;
+    --line-strong: #3f5542;
+    --accent: #6f8f72;
+    --accent-soft: #e3ece1;
+    --ok: #3f6a4b;
+    --ok-soft: #dceadf;
+    --warn: #9a7629;
+    --danger: #a34f45;
     --radius: 6px;
     --radius-sm: 4px;
-    --shadow: 3px 3px 0 rgba(36, 31, 24, .13);
+    --shadow: 3px 3px 0 rgba(63, 85, 66, .12);
     --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
     --tabbar-h: 64px;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #1c1813;
-      --bg-elev: #262019;
-      --bg-sunken: #171310;
-      --text: #f2e9db;
-      --text-soft: #ab9a83;
-      --line: #453a2c;
-      --line-strong: #6d5c45;
-      --accent: #e08a5c;
-      --accent-soft: #3a2519;
-      --ok: #7fb894;
-      --ok-soft: #22301f;
-      --warn: #d9ab55;
-      --danger: #e3796d;
+      --bg: #202b22;
+      --bg-elev: #29342b;
+      --bg-sunken: #19221b;
+      --text: #eff3ea;
+      --text-soft: #b5c1b0;
+      --line: #4a5c4c;
+      --line-strong: #afc0ae;
+      --accent: #9abb9c;
+      --accent-soft: #344737;
+      --ok: #92c69d;
+      --ok-soft: #294431;
+      --warn: #d2b773;
+      --danger: #dd877d;
       --shadow: 3px 3px 0 rgba(0, 0, 0, .35);
     }
   }
@@ -133,6 +133,60 @@
 
   .view[hidden] { display: none; }
 
+  .task-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    margin: 0 0 16px;
+    padding: 5px;
+    background: var(--bg-sunken);
+    border: 1px solid var(--line);
+  }
+
+  .task-tabs__btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--text-soft);
+    padding: 8px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    cursor: pointer;
+  }
+
+  .task-tabs__btn[aria-selected="true"] {
+    color: var(--text);
+    background: var(--bg-elev);
+    box-shadow: 1px 1px 0 var(--line);
+  }
+
+  .task-panel[hidden] { display: none; }
+
+  .header-progress {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin-top: 10px;
+    scrollbar-width: none;
+  }
+
+  .header-progress::-webkit-scrollbar { display: none; }
+
+  .header-progress__item {
+    flex: none;
+    padding: 3px 7px;
+    border: 1px solid var(--line);
+    background: var(--bg-elev);
+    color: var(--text-soft);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  .header-progress__item strong { color: var(--accent); }
+
   .view__intro {
     margin: 0 0 14px;
     font-size: 13px;
@@ -177,7 +231,7 @@
     background: var(--bg-sunken);
     overflow: hidden;
   }
-
+    grid-template-columns: repeat(4, 1fr);
   .progress-fill {
     height: 100%;
     width: 0;
@@ -187,6 +241,7 @@
       color-mix(in srgb, var(--ok) 72%, transparent) 6px 12px
     );
     transition: width .25s ease;
+      <button class="task-tabs__btn" role="tab" data-task-tab="recurring" aria-selected="false">Alle x Tage</button>
   }
 
   .progress-card__hint {
@@ -200,15 +255,14 @@
   .acc {
     background: var(--bg-elev);
     border: 2px solid var(--line-strong);
-    border-radius: var(--radius);
-    margin-bottom: 14px;
-    overflow: hidden;
-    box-shadow: var(--shadow);
-  }
 
-  .acc > summary {
-    list-style: none;
-    cursor: pointer;
+    <div class="task-panel" data-task-panel="recurring" hidden>
+      <p class="view__intro">Für Dinge, die nicht in einen festen Wochen- oder Monatsrhythmus passen.</p>
+      <p class="recurring-due" id="recurringHint"></p>
+      <div data-list="recurring"></div>
+      <div class="add-row">
+        <button class="btn" id="addRecurringBtn">+ Wiederkehrende Aufgabe</button>
+      </div>
     padding: 12px 14px;
     display: flex;
     align-items: center;
@@ -303,6 +357,12 @@
     color: var(--text-soft);
   }
 
+  .task--not-due { opacity: .68; }
+
+  .task--not-due .task__check {
+    border-color: var(--line);
+  }
+
   .task__meta {
     display: block;
     font-size: 12px;
@@ -311,6 +371,15 @@
   }
 
   .task__tools { display: flex; gap: 2px; flex: none; }
+
+  .recurring-due {
+    margin: 0 0 14px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    background: var(--accent-soft);
+    color: var(--line-strong);
+    font-size: 13px;
+  }
 
   /* ---------- Notes ---------- */
 
@@ -816,12 +885,21 @@
     <span class="app-bar__brand">Alltag+</span>
   </div>
   <p class="app-bar__date" id="dateLine"></p>
+  <div class="header-progress" id="headerProgress" aria-label="Aufgabenfortschritt"></div>
 </header>
 
 <main>
-  <!-- ============ TÄGLICH ============ -->
-  <section class="view" id="view-daily" role="tabpanel" aria-labelledby="tab-daily">
-    <p class="view__intro">Setzt sich jede Nacht um 00:00 Uhr automatisch zurück.</p>
+  <!-- ============ AUFGABEN ============ -->
+  <section class="view" id="view-tasks" role="tabpanel" aria-labelledby="tab-tasks">
+    <div class="task-tabs" role="tablist" aria-label="Aufgabenrhythmus">
+      <button class="task-tabs__btn" role="tab" data-task-tab="daily" aria-selected="true">Heute</button>
+      <button class="task-tabs__btn" role="tab" data-task-tab="weekly" aria-selected="false">Woche</button>
+      <button class="task-tabs__btn" role="tab" data-task-tab="monthly" aria-selected="false">Monat</button>
+      <button class="task-tabs__btn" role="tab" data-task-tab="recurring" aria-selected="false">Alle x Tage</button>
+    </div>
+
+    <div class="task-panel" data-task-panel="daily">
+      <p class="view__intro">Setzt sich jede Nacht um 00:00 Uhr automatisch zurück.</p>
     <div class="progress-card">
       <div class="progress-card__head">
         <span>Fortschritt heute</span>
@@ -834,10 +912,9 @@
     <div class="add-row">
       <button class="btn" data-add-task="daily">+ Tägliche Aufgabe</button>
     </div>
-  </section>
+    </div>
 
-  <!-- ============ WÖCHENTLICH ============ -->
-  <section class="view" id="view-weekly" role="tabpanel" aria-labelledby="tab-weekly" hidden>
+    <div class="task-panel" data-task-panel="weekly" hidden>
     <p class="view__intro">Setzt sich jeden Montag automatisch zurück.</p>
     <div class="progress-card">
       <div class="progress-card__head">
@@ -851,10 +928,9 @@
     <div class="add-row">
       <button class="btn" data-add-task="weekly">+ Wöchentliche Aufgabe</button>
     </div>
-  </section>
+    </div>
 
-  <!-- ============ MONATLICH ============ -->
-  <section class="view" id="view-monthly" role="tabpanel" aria-labelledby="tab-monthly" hidden>
+    <div class="task-panel" data-task-panel="monthly" hidden>
     <p class="view__intro">Setzt sich am Monatsersten automatisch zurück.</p>
     <div class="progress-card">
       <div class="progress-card__head">
@@ -867,6 +943,15 @@
     <div data-list="monthly"></div>
     <div class="add-row">
       <button class="btn" data-add-task="monthly">+ Monatliche Aufgabe</button>
+    </div>
+    </div>
+    <div class="task-panel" data-task-panel="recurring" hidden>
+      <p class="view__intro">Für Dinge, die nicht in einen festen Wochen- oder Monatsrhythmus passen.</p>
+      <p class="recurring-due" id="recurringHint"></p>
+      <div data-list="recurring"></div>
+      <div class="add-row">
+        <button class="btn" id="addRecurringBtn">+ Wiederkehrende Aufgabe</button>
+      </div>
     </div>
   </section>
 
@@ -947,17 +1032,9 @@
 </main>
 
 <nav class="tabbar" role="tablist" aria-label="Bereiche">
-  <button class="tabbar__btn" role="tab" id="tab-daily" data-tab="daily" aria-selected="true">
+  <button class="tabbar__btn" role="tab" id="tab-tasks" data-tab="tasks" aria-selected="true">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>
-    Heute
-  </button>
-  <button class="tabbar__btn" role="tab" id="tab-weekly" data-tab="weekly" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
-    Woche
-  </button>
-  <button class="tabbar__btn" role="tab" id="tab-monthly" data-tab="monthly" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18M8 15h.01M12 15h.01M16 15h.01"/></svg>
-    Monat
+    Aufgaben
   </button>
   <button class="tabbar__btn" role="tab" id="tab-shopping" data-tab="shopping" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h2l2.2 10.4a2 2 0 0 0 2 1.6h7a2 2 0 0 0 2-1.6L21 8H7"/><circle cx="10" cy="20" r="1.3"/><circle cx="18" cy="20" r="1.3"/></svg>
@@ -997,6 +1074,33 @@
     <div class="form-row">
       <label for="taskNote">Notiz (optional)</label>
       <input class="field" id="taskNote" name="note" maxlength="160" placeholder="Detail, Ort, Hinweis …" />
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="recurringDialog">
+  <form method="dialog" class="sheet" id="recurringForm">
+    <h2 id="recurringDialogTitle">Wiederkehrende Aufgabe</h2>
+    <div class="form-row">
+      <label for="recurringTitle">Aufgabe</label>
+      <input class="field" id="recurringTitle" name="title" required maxlength="120" placeholder="z. B. Rauchmelder prüfen" />
+    </div>
+    <div class="form-row">
+      <label for="recurringGroup">Bereich</label>
+      <input class="field" id="recurringGroup" name="group" list="recurringGroupOptions" maxlength="40" placeholder="z. B. Sicherheit" />
+      <datalist id="recurringGroupOptions"></datalist>
+    </div>
+    <div class="form-row">
+      <label for="recurringDays">Wiederholen alle</label>
+      <input class="field" id="recurringDays" name="days" type="number" inputmode="numeric" min="1" max="3650" required value="14" />
+    </div>
+    <div class="form-row">
+      <label for="recurringNote">Notiz (optional)</label>
+      <input class="field" id="recurringNote" name="note" maxlength="160" placeholder="Detail, Ort, Hinweis …" />
     </div>
     <div class="sheet__actions">
       <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
@@ -1091,7 +1195,7 @@
   var MODE_KEY = "AlltagPlus.mode";
   var CADENCES = ["daily", "weekly", "monthly"];
   var CADENCE_LABEL = { daily: "Täglich", weekly: "Wöchentlich", monthly: "Monatlich" };
-  var VIEW_TITLE = { daily: "Heute", weekly: "Diese Woche", monthly: "Dieser Monat", shopping: "Einkaufszettel", notes: "Merkzettel", more: "Mehr" };
+  var VIEW_TITLE = { tasks: "Aufgaben", shopping: "Einkaufszettel", notes: "Merkzettel", more: "Mehr" };
 
   // ---------- Helpers ----------
 
@@ -1213,6 +1317,7 @@
 
     return {
       tasks: t,
+      recurring: [],
       notes: n,
       shopping: [],
       shopCats: [],
@@ -1255,6 +1360,12 @@
     data.tasks.push({ id: uid(), title: "Pflanzen gießen", cadence: "daily", group: "Haushalt", note: "", donePeriod: null, lastDone: null, createdAt: now });
     data.tasks.push({ id: uid(), title: "Wäsche waschen", cadence: "weekly", group: "Haushalt", note: "Buntwäsche", donePeriod: null, lastDone: null, createdAt: now });
     data.tasks.push({ id: uid(), title: "Auto tanken", cadence: "monthly", group: "Unterwegs", note: "", donePeriod: null, lastDone: null, createdAt: now });
+    data.recurring = [
+      { id: uid(), title: "Backofen reinigen", group: "Küche", intervalDays: 90, note: "Innenraum und Bleche", lastDone: new Date(Date.now() - 77 * 86400000).toISOString(), createdAt: now },
+      { id: uid(), title: "Rauchmelder prüfen", group: "Sicherheit", intervalDays: 365, note: "Batterie und Testknopf", lastDone: new Date(Date.now() - 340 * 86400000).toISOString(), createdAt: now },
+      { id: uid(), title: "Bettwäsche wechseln", group: "Schlafzimmer", intervalDays: 14, note: "", lastDone: new Date(Date.now() - 11 * 86400000).toISOString(), createdAt: now },
+      { id: uid(), title: "Pflanzen düngen", group: "Balkon", intervalDays: 28, note: "April bis September", lastDone: new Date(Date.now() - 34 * 86400000).toISOString(), createdAt: now }
+    ];
 
     ["Küche sauber machen", "Spülmaschine ausräumen", "Betten aufschütteln", "Kurz durchlüften",
      "Bad putzen", "Wocheneinkauf planen", "Kontoauszüge prüfen", "Backup vom Handy machen"].forEach(markDone);
@@ -1336,6 +1447,7 @@
       if (!raw) return freshData();
       var parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return freshData();
+      parsed.recurring = Array.isArray(parsed.recurring) ? parsed.recurring : [];
       parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
       parsed.shopCats = Array.isArray(parsed.shopCats) ? parsed.shopCats : [];
       parsed.shopLists = Array.isArray(parsed.shopLists) ? parsed.shopLists : [];
@@ -1368,6 +1480,20 @@
     return state.tasks.filter(function (t) { return t.cadence === cadence; });
   }
 
+  function renderHeaderProgress() {
+    var host = document.getElementById("headerProgress");
+    host.textContent = "";
+    CADENCES.forEach(function (cadence) {
+      var tasks = tasksOf(cadence);
+      var done = tasks.filter(isDone).length;
+      var label = cadence === "daily" ? "Heute" : cadence === "weekly" ? "Woche" : "Monat";
+      var item = el("span", "header-progress__item");
+      item.textContent = label + " ";
+      item.appendChild(el("strong", null, done + "/" + tasks.length));
+      host.appendChild(item);
+    });
+  }
+
   function isDone(task) {
     return !!task.donePeriod && task.donePeriod === periodKey(task.cadence);
   }
@@ -1383,6 +1509,7 @@
     }
     save();
     renderTasks(task.cadence);
+    renderHeaderProgress();
     renderStats();
   }
 
@@ -1514,6 +1641,80 @@
     if (!all.length) hint.textContent = "";
     else if (doneTotal === all.length) hint.textContent = "Alles erledigt. Stark!";
     else hint.textContent = (all.length - doneTotal) + " offen · " + pct + " % geschafft";
+    renderHeaderProgress();
+  }
+
+  // ---------- Rhythmen ----------
+
+  function daysSince(iso) {
+    if (!iso) return Infinity;
+    return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  }
+
+  function remainingDays(task) {
+    return task.intervalDays - daysSince(task.lastDone);
+  }
+
+  function recurringStatus(task) {
+    var remaining = remainingDays(task);
+    if (!task.lastDone) return "Noch nie erledigt";
+    if (remaining < 0) return Math.abs(remaining) + " Tage überfällig";
+    if (remaining === 0) return "Heute fällig";
+    return "in " + remaining + " Tagen";
+  }
+
+  function renderRecurring() {
+    var host = document.querySelector('[data-list="recurring"]');
+    var hint = document.getElementById("recurringHint");
+    host.textContent = "";
+    var items = state.recurring.slice().sort(function (a, b) {
+      return remainingDays(a) - remainingDays(b) || byName(a.title, b.title);
+    });
+    var due = items.filter(function (t) { return remainingDays(t) <= 0; }).length;
+    hint.textContent = due ? due + (due === 1 ? " Aufgabe ist fällig." : " Aufgaben sind fällig.") : "Nichts ist gerade fällig.";
+
+    if (!items.length) {
+      host.appendChild(el("div", "empty", "Noch keine flexiblen Wiederholungen angelegt."));
+      return;
+    }
+
+    items.forEach(function (task) {
+      var row = el("div", "task" + (remainingDays(task) > 0 ? " task--not-due" : ""));
+      var check = el("button", "task__check");
+      check.type = "button";
+      check.setAttribute("aria-label", "Jetzt erledigt: " + task.title);
+      check.appendChild(icon(ICON.check, { width: "3" }));
+      check.addEventListener("click", function () {
+        task.lastDone = new Date().toISOString();
+        save(); renderRecurring(); renderHeaderProgress(); renderStats(); toast("Als erledigt markiert");
+      });
+      row.appendChild(check);
+
+      var main = el("div", "task__main");
+      main.appendChild(el("span", "task__title", task.title));
+      var meta = "alle " + task.intervalDays + (task.intervalDays === 1 ? " Tag" : " Tage") + " · " + recurringStatus(task);
+      if (task.lastDone) meta += " · zuletzt " + formatDate(task.lastDone);
+      if (task.note) meta += " · " + task.note;
+      main.appendChild(el("span", "task__meta", meta));
+      main.addEventListener("click", function () { openRecurringDialog(task); });
+      row.appendChild(main);
+
+      var tools = el("div", "task__tools");
+      var edit = el("button", "icon-btn");
+      edit.type = "button"; edit.title = "Bearbeiten"; edit.appendChild(icon(ICON.edit));
+      edit.addEventListener("click", function () { openRecurringDialog(task); });
+      tools.appendChild(edit);
+      var del = el("button", "icon-btn");
+      del.type = "button"; del.title = "Löschen"; del.appendChild(icon(ICON.trash));
+      del.addEventListener("click", function () {
+        if (!confirm("„" + task.title + "“ wirklich löschen?")) return;
+        state.recurring = state.recurring.filter(function (t) { return t.id !== task.id; });
+        save(); renderRecurring(); renderStats(); toast("Aufgabe gelöscht");
+      });
+      tools.appendChild(del);
+      row.appendChild(tools);
+      host.appendChild(row);
+    });
   }
 
   // ---------- Notes ----------
@@ -2274,8 +2475,50 @@
     save();
     renderTasks(cadence);
     renderStats();
-    switchTab(cadence);
+    switchTaskPanel(cadence);
+    switchTab("tasks");
     toast("Gespeichert");
+  });
+
+  var recurringDialog = document.getElementById("recurringDialog");
+  var recurringForm = document.getElementById("recurringForm");
+  var editingRecurringId = null;
+
+  function openRecurringDialog(task) {
+    editingRecurringId = task ? task.id : null;
+    document.getElementById("recurringDialogTitle").textContent = task ? "Wiederkehrende Aufgabe bearbeiten" : "Wiederkehrende Aufgabe";
+    recurringForm.title.value = task ? task.title : "";
+    recurringForm.group.value = task ? (task.group || "") : "";
+    recurringForm.days.value = task ? task.intervalDays : 14;
+    recurringForm.note.value = task ? (task.note || "") : "";
+
+    var dl = document.getElementById("recurringGroupOptions");
+    dl.textContent = "";
+    var groups = [];
+    state.recurring.forEach(function (t) {
+      var group = (t.group || "").trim();
+      if (group && groups.indexOf(group) === -1) groups.push(group);
+    });
+    groups.sort(byName).forEach(function (group) { dl.appendChild(el("option")).value = group; });
+
+    recurringDialog.showModal();
+    setTimeout(function () { recurringForm.title.focus(); }, 60);
+  }
+
+  recurringForm.addEventListener("submit", function () {
+    var title = recurringForm.title.value.trim();
+    var days = Number(recurringForm.days.value);
+    if (!title || !Number.isFinite(days) || days < 1) return;
+    var group = recurringForm.group.value.trim();
+    var note = recurringForm.note.value.trim();
+
+    if (editingRecurringId) {
+      var task = state.recurring.find(function (t) { return t.id === editingRecurringId; });
+      if (task) { task.title = title; task.group = group; task.intervalDays = days; task.note = note; }
+    } else {
+      state.recurring.push({ id: uid(), title: title, group: group, intervalDays: days, note: note, lastDone: null, createdAt: new Date().toISOString() });
+    }
+    save(); renderRecurring(); renderStats(); switchTaskPanel("recurring"); switchTab("tasks"); toast("Gespeichert");
   });
 
   var noteDialog = document.getElementById("noteDialog");
@@ -2396,13 +2639,29 @@
     if (tab === "more") renderStats();
   }
 
+  function switchTaskPanel(cadence) {
+    state.ui.taskTab = cadence;
+    document.querySelectorAll("[data-task-panel]").forEach(function (panel) {
+      panel.hidden = panel.dataset.taskPanel !== cadence;
+    });
+    document.querySelectorAll("[data-task-tab]").forEach(function (btn) {
+      btn.setAttribute("aria-selected", btn.dataset.taskTab === cadence ? "true" : "false");
+    });
+  }
+
   document.querySelectorAll(".tabbar__btn").forEach(function (b) {
     b.addEventListener("click", function () { switchTab(b.dataset.tab); });
+  });
+
+  document.querySelectorAll("[data-task-tab]").forEach(function (btn) {
+    btn.addEventListener("click", function () { switchTaskPanel(btn.dataset.taskTab); save(); });
   });
 
   CADENCES.forEach(function (c) {
     document.querySelector('[data-add-task="' + c + '"]').addEventListener("click", function () { openTaskDialog(c, null); });
   });
+
+  document.getElementById("addRecurringBtn").addEventListener("click", function () { openRecurringDialog(null); });
 
   document.getElementById("addNoteBtn").addEventListener("click", function () { openNoteDialog(null); });
   document.getElementById("noteSearch").addEventListener("input", renderNotes);
@@ -2415,6 +2674,7 @@
     document.getElementById("statsLine").textContent =
       state.tasks.length + " Aufgaben (" + open + " offen) · " + toBuy + " Sachen einzukaufen · " +
       state.shopLists.length + " gespeicherte Listen · " + state.notes.length + " Notizen · " +
+      state.recurring.length + " Rhythmen · " +
       CADENCES.map(function (c) { return tasksOf(c).length + "\u00a0" + CADENCE_LABEL[c].toLowerCase(); }).join(" · ");
   }
 
@@ -2424,6 +2684,7 @@
       state.tasks.forEach(function (t) { if (t.cadence === c) t.donePeriod = null; });
       save();
       renderTasks(c);
+      renderHeaderProgress();
       renderStats();
       toast("Häkchen zurückgesetzt");
     });
@@ -2488,6 +2749,7 @@
         if (!confirm("Backup einspielen? Die aktuellen Daten auf diesem Gerät werden ersetzt.")) return;
         state = {
           tasks: data.tasks,
+          recurring: Array.isArray(data.recurring) ? data.recurring : [],
           notes: data.notes,
           shopping: Array.isArray(data.shopping) ? data.shopping : [],
           shopCats: Array.isArray(data.shopCats) ? data.shopCats : [],
@@ -2536,13 +2798,16 @@
   function renderAll() {
     renderDateLine();
     CADENCES.forEach(renderTasks);
+    renderRecurring();
+    renderHeaderProgress();
     renderShopCategories();
     renderShopping();
     renderShopLists();
     renderChips();
     renderNotes();
     renderStats();
-    switchTab(state.ui.tab || "daily");
+    switchTaskPanel(state.ui.taskTab || (state.ui.tab === "recurring" ? "recurring" : "daily"));
+    switchTab(state.ui.tab === "daily" || state.ui.tab === "weekly" || state.ui.tab === "monthly" || state.ui.tab === "recurring" ? "tasks" : (state.ui.tab || "tasks"));
   }
 
   state = load();
