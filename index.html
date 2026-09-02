@@ -173,6 +173,8 @@
       min-width: 0;
       flex: none;
     }
+
+    .task-tabs__btn[data-task-tab="recurring"] { grid-column: 1 / -1; }
   }
 
   .task-tabs__btn[aria-selected="true"] {
@@ -910,9 +912,10 @@
   <!-- ============ AUFGABEN ============ -->
   <section class="view" id="view-tasks" role="tabpanel" aria-labelledby="tab-tasks">
     <div class="task-tabs" role="tablist" aria-label="Aufgabenrhythmus">
-      <button class="task-tabs__btn" role="tab" data-task-tab="daily" aria-selected="true">Heute</button>
+      <button class="task-tabs__btn" role="tab" data-task-tab="daily" aria-selected="true">Täglich</button>
       <button class="task-tabs__btn" role="tab" data-task-tab="weekly" aria-selected="false">Woche</button>
       <button class="task-tabs__btn" role="tab" data-task-tab="monthly" aria-selected="false">Monat</button>
+      <button class="task-tabs__btn" role="tab" data-task-tab="todos" aria-selected="false">ToDos</button>
       <button class="task-tabs__btn" role="tab" data-task-tab="recurring" aria-selected="false">Alle x Tage</button>
     </div>
 
@@ -962,6 +965,18 @@
     <div class="add-row">
       <button class="btn" data-add-task="monthly">+ Monatliche Aufgabe</button>
     </div>
+    </div>
+    <div class="task-panel" data-task-panel="todos" hidden>
+      <p class="view__intro">Kurze Merkpunkte ohne Termin oder festen Rhythmus.</p>
+      <form class="quickadd" id="todoForm">
+        <label class="sr-only" for="todoInput">Neues ToDo</label>
+        <input class="field" id="todoInput" maxlength="160" autocomplete="off" placeholder="z. B. auf dem Heimweg zur Post" />
+        <button type="submit" class="btn quickadd__btn" aria-label="ToDo hinzufügen">+</button>
+      </form>
+      <div data-list="todos"></div>
+      <div class="add-row">
+        <button class="btn btn--secondary" id="clearDoneTodosBtn">Erledigte löschen</button>
+      </div>
     </div>
     <div class="task-panel" data-task-panel="recurring" hidden>
       <p class="view__intro">Für Dinge, die nicht in einen festen Wochen- oder Monatsrhythmus passen.</p>
@@ -1336,6 +1351,7 @@
     return {
       tasks: t,
       recurring: [],
+      todos: [],
       notes: n,
       shopping: [],
       shopCats: [],
@@ -1383,6 +1399,11 @@
       { id: uid(), title: "Rauchmelder prüfen", group: "Sicherheit", intervalDays: 365, note: "Batterie und Testknopf", lastDone: new Date(Date.now() - 340 * 86400000).toISOString(), createdAt: now },
       { id: uid(), title: "Bettwäsche wechseln", group: "Schlafzimmer", intervalDays: 14, note: "", lastDone: new Date(Date.now() - 11 * 86400000).toISOString(), createdAt: now },
       { id: uid(), title: "Pflanzen düngen", group: "Balkon", intervalDays: 28, note: "April bis September", lastDone: new Date(Date.now() - 34 * 86400000).toISOString(), createdAt: now }
+    ];
+    data.todos = [
+      { id: uid(), title: "Paket bei der Post abholen", done: false, createdAt: now },
+      { id: uid(), title: "Beim Optiker anrufen", done: false, createdAt: now },
+      { id: uid(), title: "Blumen für Anna-Lena besorgen", done: true, createdAt: now }
     ];
 
     ["Küche sauber machen", "Spülmaschine ausräumen", "Betten aufschütteln", "Kurz durchlüften",
@@ -1466,6 +1487,7 @@
       var parsed = JSON.parse(raw);
       if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return freshData();
       parsed.recurring = Array.isArray(parsed.recurring) ? parsed.recurring : [];
+      parsed.todos = Array.isArray(parsed.todos) ? parsed.todos : [];
       parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
       parsed.shopCats = Array.isArray(parsed.shopCats) ? parsed.shopCats : [];
       parsed.shopLists = Array.isArray(parsed.shopLists) ? parsed.shopLists : [];
@@ -1731,6 +1753,55 @@
       });
       tools.appendChild(del);
       row.appendChild(tools);
+      host.appendChild(row);
+    });
+  }
+
+  // ---------- Kurz-ToDos ----------
+
+  function renderTodos() {
+    var host = document.querySelector('[data-list="todos"]');
+    host.textContent = "";
+    var todos = state.todos.slice().sort(function (a, b) {
+      return Number(a.done) - Number(b.done) || byName(a.title, b.title);
+    });
+
+    if (!todos.length) {
+      host.appendChild(el("div", "empty", "Keine offenen ToDos. Für spontane Erledigungen einfach oben eintippen."));
+      return;
+    }
+
+    todos.forEach(function (todo) {
+      var row = el("div", "task" + (todo.done ? " task--done" : ""));
+      var check = el("button", "task__check");
+      check.type = "button";
+      check.setAttribute("aria-pressed", todo.done ? "true" : "false");
+      check.setAttribute("aria-label", (todo.done ? "Erledigt: " : "Offen: ") + todo.title);
+      check.appendChild(icon(ICON.check, { width: "3" }));
+      check.addEventListener("click", function () {
+        todo.done = !todo.done;
+        save(); renderTodos(); renderStats();
+      });
+      row.appendChild(check);
+
+      var main = el("div", "task__main");
+      main.appendChild(el("span", "task__title", todo.title));
+      main.addEventListener("click", function () {
+        todo.done = !todo.done;
+        save(); renderTodos(); renderStats();
+      });
+      row.appendChild(main);
+
+      var del = el("button", "icon-btn");
+      del.type = "button";
+      del.title = "Löschen";
+      del.setAttribute("aria-label", "ToDo löschen: " + todo.title);
+      del.appendChild(icon(ICON.trash));
+      del.addEventListener("click", function () {
+        state.todos = state.todos.filter(function (item) { return item.id !== todo.id; });
+        save(); renderTodos(); renderStats();
+      });
+      row.appendChild(del);
       host.appendChild(row);
     });
   }
@@ -2681,6 +2752,22 @@
 
   document.getElementById("addRecurringBtn").addEventListener("click", function () { openRecurringDialog(null); });
 
+  document.getElementById("todoForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var input = document.getElementById("todoInput");
+    var title = input.value.trim();
+    if (!title) return;
+    state.todos.push({ id: uid(), title: title, done: false, createdAt: new Date().toISOString() });
+    input.value = "";
+    save(); renderTodos(); renderStats(); input.focus();
+  });
+
+  document.getElementById("clearDoneTodosBtn").addEventListener("click", function () {
+    if (!state.todos.some(function (todo) { return todo.done; })) { toast("Keine erledigten ToDos"); return; }
+    state.todos = state.todos.filter(function (todo) { return !todo.done; });
+    save(); renderTodos(); renderStats(); toast("Erledigte ToDos gelöscht");
+  });
+
   document.getElementById("addNoteBtn").addEventListener("click", function () { openNoteDialog(null); });
   document.getElementById("noteSearch").addEventListener("input", renderNotes);
 
@@ -2692,7 +2779,7 @@
     document.getElementById("statsLine").textContent =
       state.tasks.length + " Aufgaben (" + open + " offen) · " + toBuy + " Sachen einzukaufen · " +
       state.shopLists.length + " gespeicherte Listen · " + state.notes.length + " Notizen · " +
-      state.recurring.length + " Rhythmen · " +
+      state.recurring.length + " Rhythmen · " + state.todos.filter(function (todo) { return !todo.done; }).length + " ToDos offen · " +
       CADENCES.map(function (c) { return tasksOf(c).length + "\u00a0" + CADENCE_LABEL[c].toLowerCase(); }).join(" · ");
   }
 
@@ -2768,6 +2855,7 @@
         state = {
           tasks: data.tasks,
           recurring: Array.isArray(data.recurring) ? data.recurring : [],
+          todos: Array.isArray(data.todos) ? data.todos : [],
           notes: data.notes,
           shopping: Array.isArray(data.shopping) ? data.shopping : [],
           shopCats: Array.isArray(data.shopCats) ? data.shopCats : [],
@@ -2817,6 +2905,7 @@
     renderDateLine();
     CADENCES.forEach(renderTasks);
     renderRecurring();
+    renderTodos();
     renderHeaderProgress();
     renderShopCategories();
     renderShopping();
