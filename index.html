@@ -33,6 +33,23 @@
     --tabbar-h: 64px;
   }
 
+  :root[data-theme="dark"] {
+    --bg: #202b22;
+    --bg-elev: #29342b;
+    --bg-sunken: #19221b;
+    --text: #eff3ea;
+    --text-soft: #b5c1b0;
+    --line: #4a5c4c;
+    --line-strong: #afc0ae;
+    --accent: #9abb9c;
+    --accent-soft: #344737;
+    --ok: #92c69d;
+    --ok-soft: #294431;
+    --warn: #d2b773;
+    --danger: #dd877d;
+    --shadow: 3px 3px 0 rgba(0, 0, 0, .35);
+  }
+
   * { box-sizing: border-box; }
 
   html, body {
@@ -728,6 +745,17 @@
   .panel p { margin: 0 0 12px; font-size: 13.5px; color: var(--text-soft); }
   .panel .btn + .btn { margin-top: 8px; }
 
+  .theme-switch {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .theme-switch .btn[aria-pressed="true"] {
+    background: var(--accent);
+    color: #fffcf6;
+  }
+
   /* ---------- Tabbar ---------- */
 
   .tabbar {
@@ -1007,6 +1035,15 @@
     <div class="panel">
       <h2>Überblick</h2>
       <p id="statsLine">–</p>
+    </div>
+
+    <div class="panel">
+      <h2>Darstellung</h2>
+      <p>Wähle die Ansicht, die für dich angenehmer ist.</p>
+      <div class="theme-switch" role="group" aria-label="Farbschema">
+        <button type="button" class="btn btn--secondary" data-theme-option="light" aria-pressed="true">Hell</button>
+        <button type="button" class="btn btn--secondary" data-theme-option="dark" aria-pressed="false">Dunkel</button>
+      </div>
     </div>
 
     <div class="panel" id="demoPanel">
@@ -2734,6 +2771,18 @@
     if (tab === "more") renderStats();
   }
 
+  function applyTheme(theme) {
+    document.documentElement.dataset.theme = theme;
+    document.querySelector('meta[name="theme-color"]').content = theme === "dark" ? "#202b22" : "#ffffff";
+  }
+
+  function renderThemeControls() {
+    var theme = state.ui.theme === "dark" ? "dark" : "light";
+    document.querySelectorAll("[data-theme-option]").forEach(function (button) {
+      button.setAttribute("aria-pressed", button.dataset.themeOption === theme ? "true" : "false");
+    });
+  }
+
   function switchTaskPanel(cadence) {
     state.ui.taskTab = cadence;
     document.querySelectorAll("[data-task-panel]").forEach(function (panel) {
@@ -2750,6 +2799,16 @@
 
   document.querySelectorAll("[data-task-tab]").forEach(function (btn) {
     btn.addEventListener("click", function () { switchTaskPanel(btn.dataset.taskTab); save(); });
+  });
+
+  document.querySelectorAll("[data-theme-option]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var theme = button.dataset.themeOption;
+      state.ui.theme = theme;
+      applyTheme(theme);
+      renderThemeControls();
+      save();
+    });
   });
 
   CADENCES.forEach(function (c) {
@@ -2942,11 +3001,13 @@
     renderChips();
     renderNotes();
     renderStats();
+    renderThemeControls();
     switchTaskPanel(state.ui.taskTab || (state.ui.tab === "recurring" ? "recurring" : "daily"));
     switchTab(state.ui.tab === "daily" || state.ui.tab === "weekly" || state.ui.tab === "monthly" || state.ui.tab === "recurring" ? "tasks" : (state.ui.tab || "tasks"));
   }
 
   state = load();
+  applyTheme(state.ui.theme === "dark" ? "dark" : "light");
   renderAll();
   updateDemoUi();
   save();
