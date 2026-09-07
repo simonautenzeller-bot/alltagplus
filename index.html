@@ -1115,6 +1115,20 @@
   </form>
 </dialog>
 
+<dialog id="todoDialog">
+  <form method="dialog" class="sheet" id="todoFormEdit">
+    <h2>ToDo bearbeiten</h2>
+    <div class="form-row">
+      <label for="todoEditTitle">ToDo</label>
+      <input class="field" id="todoEditTitle" name="title" required maxlength="160" autocomplete="off" />
+    </div>
+    <div class="sheet__actions">
+      <button type="button" class="btn btn--secondary" data-close>Abbrechen</button>
+      <button type="submit" class="btn">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="recurringDialog">
   <form method="dialog" class="sheet" id="recurringForm">
     <h2 id="recurringDialogTitle">Wiederkehrende Aufgabe</h2>
@@ -1792,6 +1806,16 @@
       });
       row.appendChild(main);
 
+      var tools = el("div", "task__tools");
+
+      var edit = el("button", "icon-btn");
+      edit.type = "button";
+      edit.title = "Bearbeiten";
+      edit.setAttribute("aria-label", "ToDo bearbeiten: " + todo.title);
+      edit.appendChild(icon(ICON.edit));
+      edit.addEventListener("click", function () { openTodoDialog(todo); });
+      tools.appendChild(edit);
+
       var del = el("button", "icon-btn");
       del.type = "button";
       del.title = "Löschen";
@@ -1801,7 +1825,8 @@
         state.todos = state.todos.filter(function (item) { return item.id !== todo.id; });
         save(); renderTodos(); renderStats();
       });
-      row.appendChild(del);
+      tools.appendChild(del);
+      row.appendChild(tools);
       host.appendChild(row);
     });
   }
@@ -2760,6 +2785,29 @@
     state.todos.push({ id: uid(), title: title, done: false, createdAt: new Date().toISOString() });
     input.value = "";
     save(); renderTodos(); renderStats(); input.focus();
+  });
+
+  var todoDialog = document.getElementById("todoDialog");
+  var todoFormEdit = document.getElementById("todoFormEdit");
+  var editingTodoId = null;
+
+  function openTodoDialog(todo) {
+    editingTodoId = todo.id;
+    todoFormEdit.title.value = todo.title;
+    todoDialog.showModal();
+    setTimeout(function () { todoFormEdit.title.focus(); }, 60);
+  }
+
+  todoFormEdit.addEventListener("submit", function () {
+    var title = todoFormEdit.title.value.trim();
+    if (!title) return;
+    var todo = state.todos.find(function (item) { return item.id === editingTodoId; });
+    if (!todo) return;
+    todo.title = title;
+    save();
+    renderTodos();
+    renderStats();
+    toast("ToDo gespeichert");
   });
 
   document.getElementById("clearDoneTodosBtn").addEventListener("click", function () {
