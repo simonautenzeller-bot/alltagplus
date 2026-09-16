@@ -26,6 +26,12 @@
     --ok-soft: #d7eadb;
     --warn: #765713;
     --danger: #8e3f36;
+    /* Text/Akzent direkt auf der Seite (App-Bar-Titel, Datum, Hinweistexte
+       ohne Kachel-Hintergrund) – in Hell/Dunkel identisch mit --text/--accent,
+       weicht nur im Grün-Theme ab, wo Kacheln dunkel, die Seite aber hell ist. */
+    --text-page: #203526;
+    --text-page-soft: #526957;
+    --accent-elev: #3e6a47;
     --radius: 6px;
     --radius-sm: 4px;
     --shadow: 3px 3px 0 rgba(63, 85, 66, .12);
@@ -47,7 +53,39 @@
     --ok-soft: #294431;
     --warn: #d2b773;
     --danger: #dd877d;
+    --text-page: #eff3ea;
+    --text-page-soft: #b5c1b0;
+    --accent-elev: #9abb9c;
     --shadow: 3px 3px 0 rgba(0, 0, 0, .35);
+  }
+
+  /* Grün-Theme: dunkle, grüne Kacheln auf hellerem Hintergrund – für alle,
+     denen das normale Dunkel zu düster ist, aber die den grünen Akzent mögen. */
+  :root[data-theme="green"] {
+    --bg: #f3f6ef;
+    --bg-elev: #28402f;
+    --bg-sunken: #1b2c20;
+    --text: #eef4ea;
+    --text-soft: #a9c0aa;
+    --line: #45624c;
+    --line-strong: #628a6b;
+    --accent: #3e6a47;
+    --accent-soft: #dceadc;
+    --ok: #8fcf9b;
+    --ok-soft: #24432d;
+    --warn: #e0c383;
+    --danger: #8e3f36;
+    --text-page: #203526;
+    --text-page-soft: #4f6a55;
+    --accent-elev: #9ecb9f;
+    --shadow: 3px 3px 0 rgba(31, 48, 36, .18);
+  }
+
+  /* Einziger Fall, in dem --warn direkt auf dem hellen Seitenhintergrund statt
+     auf einer dunklen Kachel sitzt: der Demo-Badge in der App-Bar. */
+  :root[data-theme="green"] .app-bar__brand--demo {
+    color: #8a6a1f;
+    border-color: #8a6a1f;
   }
 
   * { box-sizing: border-box; }
@@ -102,6 +140,7 @@
     font-size: 26px;
     font-weight: 600;
     letter-spacing: -.01em;
+    color: var(--text-page);
   }
 
   .app-bar__date {
@@ -109,7 +148,7 @@
     font-size: 12px;
     letter-spacing: .09em;
     text-transform: uppercase;
-    color: var(--text-soft);
+    color: var(--text-page-soft);
   }
 
   .app-bar__brand {
@@ -210,7 +249,7 @@
     text-transform: uppercase;
   }
 
-  .header-progress__item strong { color: var(--accent); }
+  .header-progress__item strong { color: var(--accent-elev); }
 
   .header-progress__item--due {
     border-color: var(--warn);
@@ -222,7 +261,7 @@
   .view__intro {
     margin: 0 0 14px;
     font-size: 13px;
-    color: var(--text-soft);
+    color: var(--text-page-soft);
     font-style: italic;
   }
 
@@ -253,7 +292,7 @@
     font-size: 19px;
     letter-spacing: 0;
     text-transform: none;
-    color: var(--accent);
+    color: var(--accent-elev);
   }
 
   .progress-track {
@@ -309,7 +348,7 @@
     width: 16px;
     height: 16px;
     flex: none;
-    color: var(--accent);
+    color: var(--accent-elev);
     transition: transform .18s ease;
   }
 
@@ -466,7 +505,7 @@
   }
 
   .note__body li { margin: 2px 0; }
-  .note__body li::marker { color: var(--accent); }
+  .note__body li::marker { color: var(--accent-elev); }
 
   .note__checks { margin: 0 0 6px; }
 
@@ -555,7 +594,7 @@
     font-weight: 700;
     letter-spacing: .09em;
     text-transform: uppercase;
-    color: var(--text-soft);
+    color: var(--text-page-soft);
   }
 
   .shop {
@@ -806,7 +845,7 @@
 
   .theme-switch {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
@@ -1135,6 +1174,7 @@
       <div class="theme-switch" role="group" aria-label="Farbschema">
         <button type="button" class="btn btn--secondary" data-theme-option="light" aria-pressed="false">Hell</button>
         <button type="button" class="btn btn--secondary" data-theme-option="dark" aria-pressed="false">Dunkel</button>
+        <button type="button" class="btn btn--secondary" data-theme-option="green" aria-pressed="false">Grün</button>
         <button type="button" class="btn btn--secondary" data-theme-option="system" aria-pressed="true">Automatisch</button>
       </div>
     </div>
@@ -3041,19 +3081,22 @@
 
   // "system" folgt der Geräte-Einstellung per prefers-color-scheme;
   // "light"/"dark" sind explizite, feste Nutzerwahlen.
+  var FIXED_THEMES = ["light", "dark", "green"];
+  var THEME_COLOR = { light: "#ffffff", dark: "#202b22", green: "#f3f6ef" };
+
   function resolveTheme(pref) {
-    if (pref === "dark" || pref === "light") return pref;
+    if (FIXED_THEMES.indexOf(pref) !== -1) return pref;
     return darkMediaQuery && darkMediaQuery.matches ? "dark" : "light";
   }
 
   function applyTheme(pref) {
     var resolved = resolveTheme(pref);
     document.documentElement.dataset.theme = resolved;
-    document.querySelector('meta[name="theme-color"]').content = resolved === "dark" ? "#202b22" : "#ffffff";
+    document.querySelector('meta[name="theme-color"]').content = THEME_COLOR[resolved];
   }
 
   function renderThemeControls() {
-    var pref = state.ui.theme === "dark" || state.ui.theme === "light" ? state.ui.theme : "system";
+    var pref = FIXED_THEMES.indexOf(state.ui.theme) !== -1 ? state.ui.theme : "system";
     document.querySelectorAll("[data-theme-option]").forEach(function (button) {
       button.setAttribute("aria-pressed", button.dataset.themeOption === pref ? "true" : "false");
     });
@@ -3061,7 +3104,7 @@
 
   if (darkMediaQuery) {
     var onSystemThemeChange = function () {
-      if (state.ui.theme !== "dark" && state.ui.theme !== "light") applyTheme("system");
+      if (FIXED_THEMES.indexOf(state.ui.theme) === -1) applyTheme("system");
     };
     if (darkMediaQuery.addEventListener) darkMediaQuery.addEventListener("change", onSystemThemeChange);
     else if (darkMediaQuery.addListener) darkMediaQuery.addListener(onSystemThemeChange);
