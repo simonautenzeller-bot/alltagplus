@@ -26,12 +26,14 @@ python -m http.server 8080
 # danach http://localhost:8080 im Browser öffnen
 ```
 
-## OneDrive-Upload einrichten (privates Microsoft-Konto)
+## OneDrive-Upload einrichten (optional, privates Microsoft-Konto)
+
+Ohne diese Einrichtung funktioniert das Wochen-Backup trotzdem: Am Handy erinnert die App einmal pro Woche, „Jetzt sichern“ öffnet das Teilen-Menü (Android: OneDrive wählen, iPhone: „In Dateien sichern“ → OneDrive), am Computer genügt der Backup-Ordner. Der direkte Upload braucht eine eigene App-Registrierung bei Microsoft. Dafür muss man sich bei entra.microsoft.com anmelden können; ein privates Microsoft-Konto allein reicht dafür oft nicht, es braucht zusätzlich ein (kostenloses) Azure-Konto unter azure.microsoft.com/free, bei dem eine Kreditkarte nur zur Prüfung hinterlegt wird.
 
 Einmalig, am besten am Computer:
 
 1. https://entra.microsoft.com öffnen und mit dem privaten Microsoft-Konto anmelden → **App-Registrierungen → Neue Registrierung**.
-2. Name z. B. `Alltag+ Backup` (so heißt später der Ordner unter OneDrive/Apps). **Unterstützte Kontotypen: „Nur persönliche Microsoft-Konten“.**
+2. Name z. B. `Alltag+ Backup` (so heißt später der Ordner unter OneDrive/Apps). **Unterstützte Kontotypen: „Konten in einem beliebigen Organisationsverzeichnis (beliebiger Microsoft Entra-Mandant – mehrinstanzenfähig) und persönliche Microsoft-Konten“.** Die Standardauswahl („Nur dieses Organisationsverzeichnis“) führt zu der Meldung „Das Benutzerkonto ist im Mandanten ‚Microsoft Services‘ nicht vorhanden“. Eine bestehende Registrierung korrigierst du unter **Authentifizierung → Einstellungen → Unterstützte Kontotypen** (oder im **Manifest**: `"signInAudience": "AzureADandPersonalMicrosoftAccount"`). Melde dich beim Registrieren mit dem **privaten** Konto an, nicht mit dem Firmenkonto; sonst entsteht die Registrierung im Firmenmandanten.
 3. **Umleitungs-URIs**: Plattform **Single-Page-Anwendung (SPA)**. Eine einzige Registrierung genügt für alle Apps, trage einfach jede Adresse ein (genau so, mit Schrägstrich am Ende):
    - `https://simonautenzeller-bot.github.io/alltagplus/`
    - `https://simonautenzeller-bot.github.io/hausplaner/`
