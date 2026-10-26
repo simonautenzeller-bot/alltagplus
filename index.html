@@ -1020,6 +1020,21 @@
     padding: 2px 0;
   }
 
+  .backup-banner {
+    background: var(--bg-elev);
+    border: 2px solid var(--warn);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin: 0 0 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .backup-banner__text { margin: 0 0 10px; font-size: 13.5px; }
+
+  .backup-banner__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+  .backup-banner__actions .btn { padding: 8px 14px; font-size: 12px; }
+
   .confirm-text {
     margin: 0 0 16px;
     font-size: 14px;
@@ -1049,6 +1064,14 @@
 </header>
 
 <main>
+  <div class="backup-banner" id="backupBanner" role="status" hidden>
+    <p class="backup-banner__text" id="backupBannerText"></p>
+    <div class="backup-banner__actions">
+      <button type="button" class="btn" id="backupBannerAction">Jetzt sichern</button>
+      <button type="button" class="btn btn--ghost" id="backupBannerLater">Später</button>
+    </div>
+  </div>
+
   <!-- ============ AUFGABEN ============ -->
   <section class="view" id="view-tasks" role="tabpanel" aria-labelledby="tab-tasks">
     <div class="task-tabs" role="tablist" aria-label="Aufgabenrhythmus">
@@ -1186,12 +1209,21 @@
       <button class="btn btn--secondary btn--block" id="demoResetBtn" hidden>Demo-Inhalte zurücksetzen</button>
     </div>
 
+    <div class="panel" id="autoBackupPanel">
+      <h2>Wochen-Backup</h2>
+      <p id="backupStatus">–</p>
+      <p id="backupHelp"></p>
+      <button class="btn btn--block" id="backupNowBtn">Jetzt sichern</button>
+      <button class="btn btn--secondary btn--block" id="backupFolderBtn" hidden>Backup-Ordner wählen (z. B. OneDrive)</button>
+      <button class="btn btn--secondary btn--block" id="backupFolderClearBtn" hidden>Backup-Ordner entfernen</button>
+    </div>
+
     <div class="panel">
       <h2>Daten sichern</h2>
       <p>Alles liegt nur lokal auf diesem Gerät. Vor einem Handy-Wechsel bitte exportieren.</p>
       <button class="btn btn--block" id="exportBtn">Backup exportieren (.json)</button>
       <button class="btn btn--secondary btn--block" id="importBtn">Backup importieren</button>
-      <input type="file" id="importFile" accept="application/json,.json" class="sr-only" />
+      <input type="file" id="importFile" accept="application/json,text/plain,.json,.txt" class="sr-only" />
     </div>
 
     <div class="panel">
@@ -1713,12 +1745,16 @@
 
   function freshData() { return demoMode ? demoData() : seed(); }
 
+  // true, wenn die echten Daten fehlten (Erststart oder Browser-Speicher geleert)
+  var wasFreshStart = false;
+
   function load() {
     try {
       var raw = localStorage.getItem(activeKey());
-      if (!raw) return freshData();
+      if (!raw) { wasFreshStart = !demoMode; return freshData(); }
       var parsed = JSON.parse(raw);
-      if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) return freshData();
+      if (!parsed || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.notes)) { wasFreshStart = !demoMode; return freshData(); }
+      wasFreshStart = false;
       parsed.recurring = Array.isArray(parsed.recurring) ? parsed.recurring : [];
       parsed.todos = Array.isArray(parsed.todos) ? parsed.todos : [];
       parsed.shopping = Array.isArray(parsed.shopping) ? parsed.shopping : [];
@@ -1735,6 +1771,7 @@
       }
       return parsed;
     } catch (e) {
+      wasFreshStart = !demoMode;
       return freshData();
     }
   }
@@ -3224,6 +3261,9 @@
     document.getElementById("wipeText").textContent = demoMode
       ? "Löscht alle Demo-Inhalte auf diesem Gerät und lädt die Beispieldaten neu. Deine echten Daten bleiben unangetastet."
       : "Löscht alle Aufgaben, Einkäufe und Notizen auf diesem Gerät unwiderruflich und lädt die Standard-Beispieldaten neu.";
+
+    renderBackupUi();
+    renderBackupBanner();
   }
 
   function setDemoMode(on) {
@@ -3234,6 +3274,7 @@
     renderAll();
     updateDemoUi();
     toast(on ? "Demo-Modus aktiv" : "Zurück bei deinen Daten");
+    checkBackup();
   }
 
   document.getElementById("demoToggleBtn").addEventListener("click", function () {
@@ -3251,16 +3292,8 @@
   });
 
   document.getElementById("exportBtn").addEventListener("click", function () {
-    var blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    var d = new Date();
-    a.href = url;
-    a.download = "AlltagPlus-backup-" + d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + ".json";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    downloadJson(JSON.stringify(state, null, 2), "AlltagPlus-backup-" + dateStamp(new Date()) + ".json");
+    if (!demoMode) markBackup("Export");
   });
 
   var importFile = document.getElementById("importFile");
@@ -3296,6 +3329,9 @@
           save();
           renderAll();
           toast("Backup eingespielt");
+          wasFreshStart = false;
+          if (!demoMode) markBackup("Wiederherstellung");
+          renderBackupBanner();
         }
         importFile.value = "";
       });
@@ -3326,6 +3362,267 @@
       renderStats();
       toast("Zettel geleert");
     });
+  });
+
+  // ---------- Wochen-Backup ----------
+  // localStorage ist weg, sobald der Nutzer die Browser-Daten löscht. Ein Backup hilft nur,
+  // wenn es AUSSERHALB des Browsers liegt: entweder automatisch in einem vom Nutzer gewählten
+  // Ordner (File System Access API, nur Chrome/Edge am Computer) oder per Erinnerung + Teilen/Download.
+
+  var BACKUP_META_KEY = "AlltagPlus.backupMeta";
+  var BACKUP_INTERVAL_DAYS = 7;
+  var BACKUP_KEEP = 12;
+  var AUTO_FILE_RE = /^AlltagPlus-auto-\d{4}-\d{2}-\d{2}\.json$/;
+  var canPickFolder = typeof window.showDirectoryPicker === "function" && !!window.indexedDB;
+  var folderHandle = null;
+  var backupBusy = false;
+  var backupPending = false;
+  var backupDeferred = false;
+
+  function dateStamp(d) {
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  }
+
+  function downloadJson(json, filename) {
+    var blob = new Blob([json], { type: "application/json" });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  function readBackupMeta() {
+    try { return JSON.parse(localStorage.getItem(BACKUP_META_KEY)) || {}; } catch (e) { return {}; }
+  }
+
+  function backupDue() {
+    var meta = readBackupMeta();
+    if (!meta.lastAt) return true;
+    return Date.now() - new Date(meta.lastAt).getTime() >= BACKUP_INTERVAL_DAYS * 86400000;
+  }
+
+  function markBackup(via) {
+    try {
+      localStorage.setItem(BACKUP_META_KEY, JSON.stringify({ lastAt: new Date().toISOString(), via: via }));
+    } catch (e) { /* egal */ }
+    backupPending = false;
+    renderBackupUi();
+    renderBackupBanner();
+  }
+
+  // Der Ordner-Handle lässt sich nicht in localStorage ablegen, nur in IndexedDB.
+  function idbRun(mode, fn) {
+    return new Promise(function (resolve, reject) {
+      var open = indexedDB.open("AlltagPlus.backup", 1);
+      open.onupgradeneeded = function () { open.result.createObjectStore("kv"); };
+      open.onerror = function () { reject(open.error); };
+      open.onsuccess = function () {
+        var db = open.result;
+        var tx = db.transaction("kv", mode);
+        var req = fn(tx.objectStore("kv"));
+        tx.oncomplete = function () { db.close(); resolve(req.result); };
+        tx.onerror = tx.onabort = function () { db.close(); reject(tx.error); };
+      };
+    });
+  }
+
+  function loadFolderHandle() {
+    if (!canPickFolder) return Promise.resolve(null);
+    return idbRun("readonly", function (s) { return s.get("dir"); }).then(function (h) { return h || null; }, function () { return null; });
+  }
+
+  async function folderGranted(handle, ask) {
+    var opts = { mode: "readwrite" };
+    if ((await handle.queryPermission(opts)) === "granted") return true;
+    return ask && (await handle.requestPermission(opts)) === "granted";
+  }
+
+  async function writeToFolder(dir, json, stamp) {
+    var fileHandle = await dir.getFileHandle("AlltagPlus-auto-" + stamp + ".json", { create: true });
+    var writable = await fileHandle.createWritable();
+    await writable.write(json);
+    await writable.close();
+
+    // Nur eigene Auto-Dateien aufräumen; manuell exportierte Backups bleiben unangetastet.
+    try {
+      var names = [];
+      for await (var entry of dir.entries()) {
+        if (entry[1].kind === "file" && AUTO_FILE_RE.test(entry[0])) names.push(entry[0]);
+      }
+      names.sort();
+      while (names.length > BACKUP_KEEP) await dir.removeEntry(names.shift());
+    } catch (e) { /* Aufräumen ist optional */ }
+  }
+
+  // Chrome erlaubt für Web Share keine .json-Dateien, daher zusätzlich eine .txt-Variante.
+  async function shareOrDownload(json, stamp) {
+    if (!canPickFolder && navigator.share && navigator.canShare) {
+      var shareable = [
+        new File([json], "AlltagPlus-backup-" + stamp + ".json", { type: "application/json" }),
+        new File([json], "AlltagPlus-backup-" + stamp + ".txt", { type: "text/plain" })
+      ].find(function (f) { return navigator.canShare({ files: [f] }); });
+
+      if (shareable) {
+        try {
+          await navigator.share({ files: [shareable], title: "Alltag+ Backup" });
+          return "Teilen";
+        } catch (e) {
+          if (e && e.name === "AbortError") return null;
+        }
+      }
+    }
+    downloadJson(json, "AlltagPlus-backup-" + stamp + ".json");
+    return "Download";
+  }
+
+  // interactive=false: nur still arbeiten (Ordner mit bestehender Erlaubnis), sonst "needs-tap".
+  async function runBackup(interactive) {
+    if (demoMode || backupBusy) return "skipped";
+    backupBusy = true;
+    try {
+      var json = JSON.stringify(state, null, 2);
+      var stamp = dateStamp(new Date());
+
+      if (folderHandle) {
+        try {
+          if (await folderGranted(folderHandle, interactive)) {
+            await writeToFolder(folderHandle, json, stamp);
+            markBackup("Ordner „" + folderHandle.name + "“");
+            return "folder";
+          }
+        } catch (e) {
+          if (interactive) toast("Backup-Ordner nicht erreichbar");
+        }
+      }
+
+      if (!interactive) return "needs-tap";
+
+      var via = await shareOrDownload(json, stamp);
+      if (!via) return "cancelled";
+      markBackup(via);
+      return "manual";
+    } finally {
+      backupBusy = false;
+    }
+  }
+
+  async function checkBackup() {
+    if (demoMode || wasFreshStart || !backupDue()) {
+      backupPending = false;
+      renderBackupBanner();
+      return;
+    }
+    var result = await runBackup(false);
+    if (result === "folder") toast("Wochen-Backup gespeichert");
+    else if (result === "needs-tap") { backupPending = true; renderBackupBanner(); }
+  }
+
+  function daysText(n) { return n === 1 ? "1 Tag" : n + " Tagen"; }
+
+  function renderBackupUi() {
+    var status = document.getElementById("backupStatus");
+    var help = document.getElementById("backupHelp");
+    var meta = readBackupMeta();
+
+    if (demoMode) {
+      status.textContent = "Im Demo-Modus werden keine Backups erstellt.";
+    } else if (!meta.lastAt) {
+      status.textContent = "Noch kein Backup erstellt.";
+    } else {
+      var age = Math.floor((Date.now() - new Date(meta.lastAt).getTime()) / 86400000);
+      status.textContent = "Letztes Backup: " + formatDate(meta.lastAt) + " (" + (meta.via || "–") + ") · " +
+        (age >= BACKUP_INTERVAL_DAYS ? "jetzt fällig" : "nächstes in " + daysText(BACKUP_INTERVAL_DAYS - age));
+    }
+
+    if (folderHandle) {
+      help.textContent = "Beim Öffnen speichert die App einmal pro Woche automatisch eine Datei in den Ordner „" +
+        folderHandle.name + "“ (die letzten " + BACKUP_KEEP + " bleiben erhalten).";
+    } else if (canPickFolder) {
+      help.textContent = "Wähle einmal einen Ordner, am besten einen eigenen Unterordner in deinem OneDrive-Ordner. " +
+        "Danach speichert die App beim Öffnen einmal pro Woche automatisch dorthin, OneDrive lädt die Datei hoch. " +
+        "Der Browser fragt dabei gelegentlich kurz nach der Erlaubnis.";
+    } else {
+      help.textContent = "Dein Browser darf nicht selbst in Ordner schreiben. Die App erinnert dich deshalb einmal pro Woche; " +
+        "über „Teilen“ legst du die Datei dann in OneDrive ab.";
+    }
+
+    var pick = document.getElementById("backupFolderBtn");
+    pick.hidden = !canPickFolder;
+    pick.textContent = folderHandle ? "Anderen Backup-Ordner wählen" : "Backup-Ordner wählen (z. B. OneDrive)";
+    document.getElementById("backupFolderClearBtn").hidden = !folderHandle;
+  }
+
+  function renderBackupBanner() {
+    var banner = document.getElementById("backupBanner");
+    var mode = null;
+    if (!demoMode && !backupDeferred) mode = wasFreshStart ? "fresh" : (backupPending ? "due" : null);
+    banner.hidden = !mode;
+    if (!mode) return;
+
+    var text = document.getElementById("backupBannerText");
+    var action = document.getElementById("backupBannerAction");
+    var later = document.getElementById("backupBannerLater");
+
+    if (mode === "fresh") {
+      text.textContent = "Keine gespeicherten Daten gefunden – vermutlich wurde der Browser-Speicher geleert. " +
+        "Hast du ein Backup (.json)? Dann kannst du es jetzt einspielen.";
+      action.textContent = "Backup einspielen";
+      later.textContent = "Neu anfangen";
+    } else {
+      text.textContent = folderHandle
+        ? "Das Wochen-Backup ist fällig. Ein Tipp genügt, damit die App in „" + folderHandle.name + "“ speichern darf."
+        : "Das Wochen-Backup ist fällig, damit deine Daten nicht verloren gehen, wenn der Browser-Speicher mal geleert wird.";
+      action.textContent = "Jetzt sichern";
+      later.textContent = "Später";
+    }
+  }
+
+  async function backupNow() {
+    if (demoMode) { toast("Im Demo-Modus gibt es kein Backup"); return; }
+    var result = await runBackup(true);
+    if (result === "folder") toast("Backup im Ordner gespeichert");
+    else if (result === "manual") toast("Backup erstellt");
+  }
+
+  document.getElementById("backupNowBtn").addEventListener("click", backupNow);
+
+  document.getElementById("backupBannerAction").addEventListener("click", function () {
+    if (wasFreshStart) importFile.click();
+    else backupNow();
+  });
+
+  document.getElementById("backupBannerLater").addEventListener("click", function () {
+    backupDeferred = true;
+    renderBackupBanner();
+  });
+
+  document.getElementById("backupFolderBtn").addEventListener("click", async function () {
+    try {
+      var handle = await window.showDirectoryPicker({ id: "alltagplus-backup", mode: "readwrite" });
+      await idbRun("readwrite", function (s) { return s.put(handle, "dir"); });
+      folderHandle = handle;
+      renderBackupUi();
+      renderBackupBanner();
+      toast("Backup-Ordner gespeichert");
+      if (!demoMode) {
+        var result = await runBackup(true);
+        if (result === "folder") toast("Erstes Backup liegt im Ordner");
+      }
+    } catch (e) {
+      if (!e || e.name !== "AbortError") toast("Ordner konnte nicht gewählt werden");
+    }
+  });
+
+  document.getElementById("backupFolderClearBtn").addEventListener("click", async function () {
+    try { await idbRun("readwrite", function (s) { return s.delete("dir"); }); } catch (e) { /* egal */ }
+    folderHandle = null;
+    renderBackupUi();
+    renderBackupBanner();
+    toast("Backup-Ordner entfernt");
   });
 
   // ---------- Boot ----------
@@ -3359,9 +3656,16 @@
   updateDemoUi();
   save();
 
+  loadFolderHandle().then(function (handle) {
+    folderHandle = handle;
+    renderBackupUi();
+    checkBackup();
+  });
+
   var lastDay = periodKey("daily");
   document.addEventListener("visibilitychange", function () {
     if (document.visibilityState !== "visible") return;
+    checkBackup();
     if (periodKey("daily") !== lastDay) {
       lastDay = periodKey("daily");
       renderDateLine();

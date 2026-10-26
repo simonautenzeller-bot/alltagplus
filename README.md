@@ -12,6 +12,7 @@ Reines HTML/CSS/JS ohne Build-Schritt, funktioniert direkt über GitHub Pages.
 - **Gespeicherte Listen** – den aktuellen Zettel als Vorlage sichern (z. B. ein Rezept oder der Wocheneinkauf) und später per Tipp wieder auf den Zettel legen.
 - **Merkzettel** – Notizen nach Kategorien gruppiert, mit Suche, Kategorie-Filter, Anpinnen und „Kopieren“-Button (praktisch für WLAN-Passwörter und Anzeigentexte). Zeilen mit `- ` werden als Aufzählung dargestellt, Zeilen mit `[ ] ` als abhakbare Checkliste inklusive Fortschrittsanzeige.
 - **Backup** – Export/Import als JSON unter „Mehr“.
+- **Wochen-Backup** – einmal pro Woche (beim Öffnen der App) ein Backup außerhalb des Browsers, denn gelöschte Browser-Daten nehmen sonst auch die App-Daten mit. Chrome/Edge am Computer: einmal einen Ordner wählen (z. B. im OneDrive-Ordner), danach schreibt die App automatisch `AlltagPlus-auto-JJJJ-MM-TT.json` hinein, die letzten 12 bleiben. Handy/andere Browser: Erinnerung, dann per „Teilen“ → OneDrive. Fehlen beim Start alle Daten, bietet die App direkt das Einspielen eines Backups an.
 - **Demo-Modus** – unter „Mehr“ umschaltbar: zeigt die App mit gefüllten Beispiel-Inhalten. Demo- und echte Daten liegen in getrennten Speichern, nach dem Beenden ist alles wieder wie vorher.
 - **Offline** – Service Worker cached die App, alle Daten liegen im `localStorage` des Geräts.
 
@@ -57,7 +58,7 @@ Seite im Browser öffnen → Menü → **„Zum Startbildschirm hinzufügen“**
 
 ## Datenhaltung
 
-Alles bleibt lokal auf dem Gerät (`localStorage`, Schlüssel `AlltagPlus.v1`). Es gibt keine Synchronisierung zwischen Geräten – vor einem Gerätewechsel bitte unter „Mehr → Backup exportieren“ sichern. Die App ist ohne Anmeldung und ohne Verschlüsselung; sensible Passwörter also nur so speichern, wie du es auch in einer normalen Notiz-App tun würdest.
+Alles bleibt lokal auf dem Gerät (`localStorage`, Schlüssel `AlltagPlus.v1`). Achtung: `localStorage` gehört zur Origin (`https://<user>.github.io`), nicht zum Pfad – alle Apps unter derselben GitHub-Pages-Adresse teilen sich also einen Speicher und verlieren ihn gemeinsam, wenn man „Websitedaten löschen“ wählt. Jede App braucht deshalb eigene Schlüsselnamen und ein eigenes Backup. Es gibt keine Synchronisierung zwischen Geräten – vor einem Gerätewechsel bitte unter „Mehr → Backup exportieren“ sichern. Die App ist ohne Anmeldung und ohne Verschlüsselung; sensible Passwörter also nur so speichern, wie du es auch in einer normalen Notiz-App tun würdest.
 
 ## Design
 
