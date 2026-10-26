@@ -32,11 +32,31 @@ Einmalig, am besten am Computer:
 
 1. https://entra.microsoft.com öffnen und mit dem privaten Microsoft-Konto anmelden → **App-Registrierungen → Neue Registrierung**.
 2. Name z. B. `Alltag+ Backup` (so heißt später der Ordner unter OneDrive/Apps). **Unterstützte Kontotypen: „Nur persönliche Microsoft-Konten“.**
-3. **Umleitungs-URI**: Plattform **Single-Page-Anwendung (SPA)**, Wert `https://simonautenzeller-bot.github.io/alltagplus/` (genau so, mit Schrägstrich am Ende).
+3. **Umleitungs-URIs**: Plattform **Single-Page-Anwendung (SPA)**. Eine einzige Registrierung genügt für alle Apps, trage einfach jede Adresse ein (genau so, mit Schrägstrich am Ende):
+   - `https://simonautenzeller-bot.github.io/alltagplus/`
+   - `https://simonautenzeller-bot.github.io/hausplaner/`
+   - `https://simonautenzeller-bot.github.io/finanzen-app/`
+   - `https://simonautenzeller-bot.github.io/watchdex/`
+   - `https://simonautenzeller-bot.github.io/questlog/`
 4. Registrieren und die **Anwendungs-(Client-)ID** kopieren. Berechtigungen müssen nicht eingetragen werden, die Zustimmung kommt beim ersten Anmelden.
-5. In der App: **Mehr → OneDrive (privat)** → Client-ID einfügen → „Mit OneDrive verbinden“.
+5. In der App: **Mehr → OneDrive (privat)** → Client-ID einfügen → „Mit OneDrive verbinden“. Die Client-ID merkt sich der Browser für alle Apps unter derselben Adresse, in den anderen Apps muss dann nur noch „Mit OneDrive verbinden“ getippt werden. Jede App schreibt ihre Dateien mit eigenem Namensanfang (`AlltagPlus-auto-…`, `Finanzen-auto-…` usw.) in denselben OneDrive-App-Ordner.
 
 Danach lädt die App ein fälliges Wochen-Backup beim Öffnen hoch (kurzer Wechsel zu Microsoft und zurück). Klappt die stille Anmeldung nicht, erscheint der Hinweis „Backup fällig“ mit einem Tipp-Button. Die Dateien landen in `OneDrive/Apps/<App-Name>/`, es wird nur dieser App-Ordner freigegeben (Berechtigung `Files.ReadWrite.AppFolder`). Wer die ID fest einbauen will, trägt sie in `index.html` bei `ONEDRIVE_CLIENT_ID` ein, dann übersteht sie auch gelöschte Browserdaten.
+
+### Gemeinsames Backup-Modul (`backup.js`)
+
+Die komplette Backup-Logik liegt in `backup.js`, einer Datei ohne Abhängigkeiten, die identisch in alltagplus, hausplaner, finanzen-app, watchdex und questlog liegt. Jede App bindet sie mit `AppBackup.init({ ... })` ein und liefert nur:
+
+| Option | Zweck |
+| --- | --- |
+| `appId`, `appName`, `filePrefix` | Namensräume für Speicher-Schlüssel und Dateinamen |
+| `getData()` | liefert die zu sichernden Daten, `null` pausiert das Backup (z. B. im Demo-Modus) |
+| `restore(text)` | spielt ein Backup ein, gibt `true`/`false` zurück |
+| `isFresh()` | `true`, wenn die App ohne gespeicherte Daten gestartet ist |
+| `bannerParent` / `bannerBefore` / `bannerClass` | wo der Hinweis erscheint |
+| `btnClass`, `btnPrimaryClass`, `inputClass` | Klassen der App für Buttons und Eingabefeld |
+
+`AppBackup.createPanel()` liefert das Einstellungs-Panel, `AppBackup.markExternal("Export")` verbucht ein manuelles Backup, `AppBackup.refresh()` aktualisiert die Anzeige. **Wird `backup.js` geändert, bitte die Kopie in alle Repos übernehmen.**
 
 ## Auf GitHub Pages veröffentlichen
 
@@ -64,6 +84,7 @@ Seite im Browser öffnen → Menü → **„Zum Startbildschirm hinzufügen“**
 | Datei | Zweck |
 | --- | --- |
 | `index.html` | Komplette App (Markup, Styles, Logik) |
+| `backup.js` | Wochen-Backup (Ordner, OneDrive, Teilen), gemeinsames Modul aller Apps |
 | `manifest.webmanifest` | PWA-Metadaten (Name, Icons, Farben) |
 | `sw.js` | Service Worker für Offline-Betrieb |
 | `icon.svg`, `icon-192.png`, `icon-512.png` | App-Icons |

@@ -1,7 +1,8 @@
-const CACHE_NAME = "AlltagPlus-v5";
+const CACHE_NAME = "AlltagPlus-v6";
 const APP_FILES = [
   "./",
   "./index.html",
+  "./backup.js",
   "./manifest.webmanifest",
   "./icon.svg",
   "./icon-192.png",
