@@ -26,6 +26,18 @@ python -m http.server 8080
 # danach http://localhost:8080 im Browser öffnen
 ```
 
+## OneDrive-Upload einrichten (privates Microsoft-Konto)
+
+Einmalig, am besten am Computer:
+
+1. https://entra.microsoft.com öffnen und mit dem privaten Microsoft-Konto anmelden → **App-Registrierungen → Neue Registrierung**.
+2. Name z. B. `Alltag+ Backup` (so heißt später der Ordner unter OneDrive/Apps). **Unterstützte Kontotypen: „Nur persönliche Microsoft-Konten“.**
+3. **Umleitungs-URI**: Plattform **Single-Page-Anwendung (SPA)**, Wert `https://simonautenzeller-bot.github.io/alltagplus/` (genau so, mit Schrägstrich am Ende).
+4. Registrieren und die **Anwendungs-(Client-)ID** kopieren. Berechtigungen müssen nicht eingetragen werden, die Zustimmung kommt beim ersten Anmelden.
+5. In der App: **Mehr → OneDrive (privat)** → Client-ID einfügen → „Mit OneDrive verbinden“.
+
+Danach lädt die App ein fälliges Wochen-Backup beim Öffnen hoch (kurzer Wechsel zu Microsoft und zurück). Klappt die stille Anmeldung nicht, erscheint der Hinweis „Backup fällig“ mit einem Tipp-Button. Die Dateien landen in `OneDrive/Apps/<App-Name>/`, es wird nur dieser App-Ordner freigegeben (Berechtigung `Files.ReadWrite.AppFolder`). Wer die ID fest einbauen will, trägt sie in `index.html` bei `ONEDRIVE_CLIENT_ID` ein, dann übersteht sie auch gelöschte Browserdaten.
+
 ## Auf GitHub Pages veröffentlichen
 
 1. Neues Repository anlegen, z. B. `AlltagPlus`.

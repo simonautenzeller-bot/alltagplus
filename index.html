@@ -1029,6 +1029,10 @@
     box-shadow: var(--shadow);
   }
 
+  #odClientId { margin-bottom: 10px; }
+
+  #odHelp code { word-break: break-all; }
+
   .backup-banner__text { margin: 0 0 10px; font-size: 13.5px; }
 
   .backup-banner__actions { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1216,6 +1220,18 @@
       <button class="btn btn--block" id="backupNowBtn">Jetzt sichern</button>
       <button class="btn btn--secondary btn--block" id="backupFolderBtn" hidden>Backup-Ordner wählen (z. B. OneDrive)</button>
       <button class="btn btn--secondary btn--block" id="backupFolderClearBtn" hidden>Backup-Ordner entfernen</button>
+    </div>
+
+    <div class="panel" id="oneDrivePanel">
+      <h2>OneDrive (privat)</h2>
+      <p id="odStatus">–</p>
+      <div id="odSetup">
+        <p id="odHelp"></p>
+        <label class="sr-only" for="odClientId">Client-ID</label>
+        <input class="field" id="odClientId" placeholder="Anwendungs-(Client-)ID" autocomplete="off" spellcheck="false" />
+      </div>
+      <button class="btn btn--block" id="odConnectBtn">Mit OneDrive verbinden</button>
+      <button class="btn btn--secondary btn--block" id="odDisconnectBtn" hidden>OneDrive trennen</button>
     </div>
 
     <div class="panel">
@@ -3499,6 +3515,13 @@
         }
       }
 
+      // OneDrive: Das Upload passiert erst nach der Rückkehr von der Microsoft-Anmeldung (odHandleCallback).
+      if (odConnected()) {
+        if (!interactive) return "needs-login";
+        await odLogin(false);
+        return "redirect";
+      }
+
       if (!interactive) return "needs-tap";
 
       var via = await shareOrDownload(json, stamp);
@@ -3517,9 +3540,184 @@
       return;
     }
     var result = await runBackup(false);
-    if (result === "folder") toast("Wochen-Backup gespeichert");
-    else if (result === "needs-tap") { backupPending = true; renderBackupBanner(); }
+    if (result === "folder") {
+      toast("Wochen-Backup gespeichert");
+    } else if (result === "needs-login") {
+      // Einmal leise versuchen (kurzer Wechsel zu Microsoft ohne Eingabe); klappt das nicht, hilft der Hinweis mit Tipp.
+      var cfg = odConfig();
+      var triedRecently = cfg.lastSilent && Date.now() - new Date(cfg.lastSilent).getTime() < 12 * 3600000;
+      if (navigator.onLine && !triedRecently) {
+        cfg.lastSilent = new Date().toISOString();
+        odSave(cfg);
+        odLogin(true);
+      } else {
+        backupPending = true;
+        renderBackupBanner();
+      }
+    } else if (result === "needs-tap") {
+      backupPending = true;
+      renderBackupBanner();
+    }
   }
+
+  // ---------- OneDrive (Microsoft Graph, Authorization-Code-Flow mit PKCE, ohne Server) ----------
+  // Einmalige Einrichtung: eigene App-Registrierung bei Microsoft (nur private Konten, Typ "Single-Page-Application").
+  // Gespeichert wird nur im App-Ordner (Scope Files.ReadWrite.AppFolder): OneDrive/Apps/<App-Name>/.
+
+  var ONEDRIVE_CLIENT_ID = "";
+  var OD_KEY = "AlltagPlus.onedrive";
+  var OD_AUTH_KEY = "AlltagPlus.odAuth";
+  var OD_SCOPE = "openid email Files.ReadWrite.AppFolder";
+  var OD_AUTH_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/";
+  var OD_GRAPH_URL = "https://graph.microsoft.com/v1.0/me/drive/";
+  var GUID_RE = /^[0-9a-f]{8}-([0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
+
+  function odConfig() {
+    try { return JSON.parse(localStorage.getItem(OD_KEY)) || {}; } catch (e) { return {}; }
+  }
+
+  function odSave(cfg) {
+    try { localStorage.setItem(OD_KEY, JSON.stringify(cfg)); } catch (e) { /* egal */ }
+  }
+
+  function odClientId() { return ONEDRIVE_CLIENT_ID || odConfig().clientId || ""; }
+
+  function odConnected() { return !!odConfig().connected && GUID_RE.test(odClientId()); }
+
+  function odRedirectUri() { return new URL("./", location.href).href; }
+
+  function goTo(url) { location.assign(url); }
+
+  function b64url(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+
+  async function odLogin(silent) {
+    var cfg = odConfig();
+    var verifier = b64url(crypto.getRandomValues(new Uint8Array(48)));
+    var challenge = b64url(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))));
+    var state = b64url(crypto.getRandomValues(new Uint8Array(16)));
+    // localStorage statt sessionStorage: Beim Rückweg kann ein anderer Browser-Kontext (z. B. die installierte App) öffnen.
+    localStorage.setItem(OD_AUTH_KEY, JSON.stringify({ verifier: verifier, state: state, silent: !!silent }));
+
+    var q = new URLSearchParams({
+      client_id: odClientId(),
+      response_type: "code",
+      redirect_uri: odRedirectUri(),
+      response_mode: "query",
+      scope: OD_SCOPE,
+      state: state,
+      code_challenge: challenge,
+      code_challenge_method: "S256"
+    });
+    if (silent) q.set("prompt", "none");
+    if (cfg.hint) q.set("login_hint", cfg.hint);
+    goTo(OD_AUTH_URL + "authorize?" + q.toString());
+  }
+
+  async function odUpload(token, json, stamp) {
+    var headers = { Authorization: "Bearer " + token };
+    var res = await fetch(OD_GRAPH_URL + "special/approot:/AlltagPlus-auto-" + stamp + ".json:/content", {
+      method: "PUT",
+      headers: { Authorization: headers.Authorization, "Content-Type": "application/json" },
+      body: json
+    });
+    if (!res.ok) throw new Error("upload " + res.status);
+
+    try {
+      var list = await (await fetch(OD_GRAPH_URL + "special/approot/children?$select=id,name&$top=200", { headers: headers })).json();
+      var old = (list.value || []).filter(function (f) { return AUTO_FILE_RE.test(f.name); })
+        .sort(function (a, b) { return a.name < b.name ? -1 : 1; });
+      while (old.length > BACKUP_KEEP) {
+        await fetch(OD_GRAPH_URL + "items/" + old.shift().id, { method: "DELETE", headers: headers });
+      }
+    } catch (e) { /* Aufräumen ist optional */ }
+  }
+
+  // Beim Start aufrufen: Kommt der Nutzer von der Microsoft-Anmeldung zurück, wird jetzt hochgeladen.
+  async function odHandleCallback() {
+    var p = new URLSearchParams(location.search);
+    if (!p.has("code") && !p.has("error")) return;
+    var pending;
+    try { pending = JSON.parse(localStorage.getItem(OD_AUTH_KEY)); } catch (e) { pending = null; }
+    if (!pending || pending.state !== p.get("state")) return;
+
+    localStorage.removeItem(OD_AUTH_KEY);
+    history.replaceState(null, "", odRedirectUri());
+
+    if (p.has("error")) {
+      if (!pending.silent) toast("OneDrive-Anmeldung abgebrochen");
+      return;
+    }
+    if (demoMode) { toast("Im Demo-Modus kein OneDrive-Backup"); return; }
+
+    try {
+      var res = await fetch(OD_AUTH_URL + "token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: odClientId(),
+          scope: OD_SCOPE,
+          code: p.get("code"),
+          redirect_uri: odRedirectUri(),
+          grant_type: "authorization_code",
+          code_verifier: pending.verifier
+        }).toString()
+      });
+      var tok = await res.json();
+      if (!res.ok || !tok.access_token) throw new Error("token");
+
+      var cfg = odConfig();
+      cfg.connected = true;
+      try {
+        var claims = JSON.parse(atob(tok.id_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+        cfg.hint = claims.email || claims.preferred_username || cfg.hint;
+      } catch (e) { /* Hinweis ist optional */ }
+      odSave(cfg);
+
+      await odUpload(tok.access_token, JSON.stringify(state, null, 2), dateStamp(new Date()));
+      markBackup("OneDrive");
+      toast("Backup in OneDrive gespeichert");
+    } catch (e) {
+      backupPending = true;
+      renderBackupBanner();
+      toast("OneDrive-Backup fehlgeschlagen");
+    }
+    renderOdUi();
+  }
+
+  function renderOdUi() {
+    var cfg = odConfig();
+    var connected = odConnected();
+    var needsId = !ONEDRIVE_CLIENT_ID;
+    document.getElementById("odStatus").textContent = connected
+      ? "Verbunden" + (cfg.hint ? " als " + cfg.hint : "") + ". Fällige Wochen-Backups landen in OneDrive unter „Apps“. Beim Öffnen wechselt die App dafür kurz zu Microsoft und zurück."
+      : "Noch nicht verbunden. Damit lädt die App das Wochen-Backup direkt in dein privates OneDrive (Teilen-Menü nicht nötig).";
+    document.getElementById("odSetup").hidden = connected || !needsId;
+    document.getElementById("odHelp").textContent = "Einmal bei Microsoft eine App registrieren (Schritte in der README) und die Client-ID hier einfügen. Weiterleitungs-URI: " + odRedirectUri();
+    document.getElementById("odClientId").value = odConfig().clientId || "";
+    document.getElementById("odConnectBtn").hidden = connected;
+    document.getElementById("odDisconnectBtn").hidden = !connected;
+  }
+
+  document.getElementById("odConnectBtn").addEventListener("click", function () {
+    if (demoMode) { toast("Bitte erst den Demo-Modus beenden"); return; }
+    var id = ONEDRIVE_CLIENT_ID || document.getElementById("odClientId").value.trim();
+    if (!GUID_RE.test(id)) { toast("Das sieht nicht nach einer Client-ID aus"); return; }
+    var cfg = odConfig();
+    cfg.clientId = id;
+    odSave(cfg);
+    odLogin(false);
+  });
+
+  document.getElementById("odDisconnectBtn").addEventListener("click", function () {
+    try { localStorage.removeItem(OD_KEY); } catch (e) { /* egal */ }
+    renderOdUi();
+    renderBackupBanner();
+    toast("OneDrive getrennt");
+  });
 
   function daysText(n) { return n === 1 ? "1 Tag" : n + " Tagen"; }
 
@@ -3545,9 +3743,11 @@
       help.textContent = "Wähle einmal einen Ordner, am besten einen eigenen Unterordner in deinem OneDrive-Ordner. " +
         "Danach speichert die App beim Öffnen einmal pro Woche automatisch dorthin, OneDrive lädt die Datei hoch. " +
         "Der Browser fragt dabei gelegentlich kurz nach der Erlaubnis.";
+    } else if (odConnected()) {
+      help.textContent = "Beim Öffnen lädt die App ein fälliges Backup automatisch in dein OneDrive (siehe unten).";
     } else {
-      help.textContent = "Dein Browser darf nicht selbst in Ordner schreiben. Die App erinnert dich deshalb einmal pro Woche; " +
-        "über „Teilen“ legst du die Datei dann in OneDrive ab.";
+      help.textContent = "Dein Browser darf nicht selbst in Ordner schreiben. Verbinde unten OneDrive, " +
+        "oder die App erinnert dich einmal pro Woche und du legst die Datei über „Teilen“ in OneDrive ab.";
     }
 
     var pick = document.getElementById("backupFolderBtn");
@@ -3575,7 +3775,9 @@
     } else {
       text.textContent = folderHandle
         ? "Das Wochen-Backup ist fällig. Ein Tipp genügt, damit die App in „" + folderHandle.name + "“ speichern darf."
-        : "Das Wochen-Backup ist fällig, damit deine Daten nicht verloren gehen, wenn der Browser-Speicher mal geleert wird.";
+        : odConnected()
+          ? "Das Wochen-Backup ist fällig. Ein Tipp, kurz bei Microsoft bestätigen, dann liegt es in OneDrive."
+          : "Das Wochen-Backup ist fällig, damit deine Daten nicht verloren gehen, wenn der Browser-Speicher mal geleert wird.";
       action.textContent = "Jetzt sichern";
       later.textContent = "Später";
     }
@@ -3656,11 +3858,15 @@
   updateDemoUi();
   save();
 
-  loadFolderHandle().then(function (handle) {
-    folderHandle = handle;
-    renderBackupUi();
-    checkBackup();
-  });
+  renderOdUi();
+  odHandleCallback()
+    .catch(function () { /* Anmeldung fehlgeschlagen: der Hinweis unten greift */ })
+    .then(loadFolderHandle)
+    .then(function (handle) {
+      folderHandle = handle;
+      renderBackupUi();
+      checkBackup();
+    });
 
   var lastDay = periodKey("daily");
   document.addEventListener("visibilitychange", function () {
